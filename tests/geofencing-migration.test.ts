@@ -175,3 +175,34 @@ describe("browser geolocation flow", () => {
     assert.doesNotMatch(checkinPanel, /localStorage|sessionStorage|URLSearchParams/);
   });
 });
+
+describe("rewarded check-in feedback", () => {
+  it("prepares audio during the explicit submit gesture", () => {
+    const submitStart = checkinPanel.indexOf("function handleSubmit");
+    const successRender = checkinPanel.indexOf(
+      'if (state.status === "success")',
+    );
+    const submitDefinition = checkinPanel.slice(submitStart, successRender);
+
+    assert.match(submitDefinition, /createSuccessAudioContext\(\)/);
+    assert.match(submitDefinition, /audioContextRef\.current\.resume\(\)/);
+  });
+
+  it("fires vibration and sound only for a confirmed rewarded success", () => {
+    assert.match(
+      checkinPanel,
+      /state\.status !== "success" \|\| \(state\.pointsAwarded \?\? 0\) <= 0/,
+    );
+    assert.match(checkinPanel, /navigator\.vibrate\(60\)/);
+    assert.match(checkinPanel, /playSuccessSound\(audioContextRef\.current\)/);
+  });
+
+  it("deduplicates feedback across React re-renders", () => {
+    assert.match(checkinPanel, /feedbackKeyRef = useRef/);
+    assert.match(
+      checkinPanel,
+      /if \(feedbackKeyRef\.current === feedbackKey\) return/,
+    );
+    assert.match(checkinPanel, /feedbackKeyRef\.current = feedbackKey/);
+  });
+});

@@ -41,6 +41,69 @@ const locationIssueMessages: Record<LocationIssue, string> = {
     "Your phone couldn’t determine its location. Check location services and try again.",
 };
 
+type AudioWindow = Window & {
+  webkitAudioContext?: typeof AudioContext;
+};
+
+function createSuccessAudioContext() {
+  try {
+    const audioWindow = window as AudioWindow;
+    const AudioContextConstructor =
+      (typeof AudioContext !== "undefined" ? AudioContext : undefined) ??
+      audioWindow.webkitAudioContext;
+
+    return AudioContextConstructor ? new AudioContextConstructor() : null;
+  } catch {
+    return null;
+  }
+}
+
+function playTone(
+  context: AudioContext,
+  frequency: number,
+  startsAt: number,
+  duration: number,
+  volume: number,
+) {
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(frequency, startsAt);
+  oscillator.frequency.exponentialRampToValueAtTime(
+    frequency * 1.08,
+    startsAt + duration,
+  );
+  gain.gain.setValueAtTime(0.0001, startsAt);
+  gain.gain.exponentialRampToValueAtTime(volume, startsAt + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startsAt + duration);
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(startsAt);
+  oscillator.stop(startsAt + duration);
+}
+
+function playSuccessSound(context: AudioContext | null) {
+  if (!context || context.state === "closed") return;
+
+  const play = () => {
+    try {
+      const now = context.currentTime;
+      playTone(context, 660, now, 0.1, 0.045);
+      playTone(context, 880, now + 0.055, 0.11, 0.035);
+    } catch {
+      // Feedback is optional and must never interrupt a rewarded check-in.
+    }
+  };
+
+  if (context.state === "running") {
+    play();
+    return;
+  }
+
+  void context.resume().then(play).catch(() => undefined);
+}
+
 function formatRemainingTime(nextEligibleAt?: string) {
   if (!nextEligibleAt) return "a little while";
 
@@ -115,6 +178,8 @@ export function CheckinPanel({
   const [verifyingLocation, setVerifyingLocation] = useState(false);
   const [locationIssue, setLocationIssue] = useState<LocationIssue | null>(null);
   const submissionInFlight = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const feedbackKeyRef = useRef<string | null>(null);
   const pending = verifyingLocation || actionPending;
 
   useEffect(() => {
@@ -122,6 +187,29 @@ export function CheckinPanel({
       submissionInFlight.current = false;
     }
   }, [actionPending, state.status]);
+
+  useEffect(() => {
+    if (state.status !== "success" || (state.pointsAwarded ?? 0) <= 0) return;
+
+    const feedbackKey =
+      state.checkedInAt ?? `${state.totalPoints}-${state.pointsAwarded}`;
+
+    if (feedbackKeyRef.current === feedbackKey) return;
+    feedbackKeyRef.current = feedbackKey;
+
+    try {
+      if (typeof navigator.vibrate === "function") navigator.vibrate(60);
+    } catch {
+      // Vibration is optional and unsupported on some browsers, including iOS.
+    }
+
+    playSuccessSound(audioContextRef.current);
+  }, [
+    state.checkedInAt,
+    state.pointsAwarded,
+    state.status,
+    state.totalPoints,
+  ]);
 
   function submitVerifiedPosition(form: HTMLFormElement) {
     setLocationIssue(null);
@@ -177,6 +265,14 @@ export function CheckinPanel({
     }
 
     submissionInFlight.current = true;
+
+    // Create/resume audio during the explicit CHECK IN gesture. The context is
+    // silent here; the tone plays only after the server confirms a reward.
+    audioContextRef.current ??= createSuccessAudioContext();
+    if (audioContextRef.current?.state === "suspended") {
+      void audioContextRef.current.resume().catch(() => undefined);
+    }
+
     if (!requiresLocationVerification) return;
 
     event.preventDefault();
