@@ -1,0 +1,139 @@
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  border-top: 1px solid var(--border);
+  padding: 22px 26px;
+}
+
+.copy h3,
+.copy p {
+  margin: 0;
+}
+
+.copy h3 {
+  font-size: 0.9rem;
+  letter-spacing: -0.015em;
+}
+
+.copy p {
+  max-width: 620px;
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  width: 44px;
+  height: 26px;
+  flex: 0 0 44px;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.track {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: #e8e7eb;
+  transition:
+    border-color 0.16s,
+    background-color 0.16s;
+}
+
+.track::after {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(17 17 19 / 22%);
+  content: "";
+  transition: transform 0.16s;
+}
+
+.switch input:checked + .track {
+  border-color: var(--purple);
+  background: var(--purple);
+}
+
+.switch input:checked + .track::after {
+  transform: translateX(18px);
+}
+
+.switch input:focus-visible + .track {
+  outline: 3px solid rgb(111 61 221 / 18%);
+  outline-offset: 2px;
+}
+
+.saveButton {
+  min-width: 82px;
+  min-height: 42px;
+  border: 1px solid var(--purple);
+  border-radius: 9px;
+  cursor: pointer;
+  background: var(--purple);
+  color: #fff;
+  padding: 0 16px;
+  font-weight: 700;
+  transition:
+    opacity 0.16s,
+    transform 0.14s;
+}
+
+.saveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.saveButton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.message {
+  grid-column: 1 / -1;
+  margin: -12px 0 0;
+  font-size: 0.73rem;
+}
+
+.success {
+  color: #167044;
+}
+
+.error {
+  color: var(--danger);
+}
+
+@media (max-width: 560px) {
+  .form {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 20px 18px;
+  }
+
+  .controls {
+    justify-content: space-between;
+  }
+
+  .message {
+    margin-top: -7px;
+  }
+}

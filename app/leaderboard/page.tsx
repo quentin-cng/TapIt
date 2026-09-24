@@ -28,7 +28,8 @@ export default async function LeaderboardPage({
   searchParams,
 }: LeaderboardPageProps) {
   const { view } = await searchParams;
-  const activeView = view === "mcgill" ? "mcgill" : "friends";
+  const activeView =
+    view === "general" || view === "mcgill" ? "general" : "friends";
   const supabase = await createClient();
   const { data: claimsData, error: claimsError } =
     await supabase.auth.getClaims();
@@ -81,7 +82,7 @@ export default async function LeaderboardPage({
     });
 
     profiles = ((data ?? []) as GlobalLeaderboardRow[]).map((profile) => ({
-      key: profile.username,
+      key: String(profile.rank_position),
       username: profile.username,
       total_points: profile.total_points,
       is_current_user: profile.is_current_user,
@@ -106,11 +107,11 @@ export default async function LeaderboardPage({
           Friends
         </Link>
         <Link
-          aria-current={activeView === "mcgill" ? "page" : undefined}
-          className={activeView === "mcgill" ? "active" : undefined}
-          href="/leaderboard?view=mcgill"
+          aria-current={activeView === "general" ? "page" : undefined}
+          className={activeView === "general" ? "active" : undefined}
+          href="/leaderboard?view=general"
         >
-          McGill
+          General
         </Link>
       </nav>
 
@@ -118,7 +119,7 @@ export default async function LeaderboardPage({
         <div className="leaderboard-heading">
           <div>
             <p className="section-label">
-              {activeView === "friends" ? "Your circle" : "Campus standings"}
+              {activeView === "friends" ? "Your circle" : "General standings"}
             </p>
             <h2>
               {activeView === "friends" ? "Friends ranking" : "Top 100"}
@@ -146,7 +147,11 @@ export default async function LeaderboardPage({
                 >
                   <span className="leaderboard-rank">{index + 1}</span>
                   <div className="leaderboard-user">
-                    <strong>@{profile.username}</strong>
+                    <strong>
+                      {profile.username === "Anonymous"
+                        ? profile.username
+                        : `@${profile.username}`}
+                    </strong>
                     {isCurrentUser ? <small>You</small> : null}
                   </div>
                   <div className="leaderboard-row-stats">
@@ -177,9 +182,9 @@ export default async function LeaderboardPage({
             Add friends to turn this into a competition.
           </p>
         ) : null}
-        {activeView === "mcgill" ? (
+        {activeView === "general" ? (
           <p className="leaderboard-note">
-            MVP campus view: the top 100 TapIt profiles globally.
+            General leaderboard: the top 100 TapIt profiles globally.
           </p>
         ) : null}
       </section>

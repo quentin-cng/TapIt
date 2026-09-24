@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { logout } from "@/app/dashboard/actions";
 import { AppShell } from "@/components/app-shell";
 import { DeleteAccountForm } from "@/components/delete-account-form";
+import { GeneralLeaderboardPrivacyForm } from "@/components/general-leaderboard-privacy-form";
 import { PageHeader, ProgressBar } from "@/components/ui";
 import { WeeklyGoalForm } from "@/components/weekly-goal-form";
 import { addCalendarDays, getMontrealWeekStart } from "@/lib/stats/montreal-calendar";
@@ -39,7 +40,12 @@ export default async function ProfilePage() {
     redirect(`/login?next=${encodeURIComponent("/profile")}`);
   }
 
-  const [profileResult, checkinsResult, schedulesResult] = await Promise.all([
+  const [
+    profileResult,
+    checkinsResult,
+    schedulesResult,
+    leaderboardPreferenceResult,
+  ] = await Promise.all([
     supabase.rpc("get_my_profile").single(),
     supabase
       .from("checkins")
@@ -52,6 +58,7 @@ export default async function ProfilePage() {
       .select("effective_week, goal_sessions")
       .eq("user_id", userId)
       .order("effective_week", { ascending: true }),
+    supabase.rpc("get_my_general_leaderboard_preference"),
   ]);
 
   const profile = profileResult.data as MyProfile | null;
@@ -104,6 +111,7 @@ export default async function ProfilePage() {
     profileError ||
     checkinsResult.error ||
     schedulesResult.error ||
+    leaderboardPreferenceResult.error ||
     locationsResult.error;
 
   return (
@@ -282,6 +290,10 @@ export default async function ProfilePage() {
                 </button>
               </form>
             </div>
+
+            <GeneralLeaderboardPrivacyForm
+              initialValue={leaderboardPreferenceResult.data !== false}
+            />
 
             <div className={styles.dangerZone}>
               <div className={styles.dangerCopy}>

@@ -226,17 +226,16 @@ export default function TermsPage() {
       <section>
         <h2>11. McGill References</h2>
         <p>
-          TapIt may currently use &quot;McGill&quot; to identify certain locations,
-          communities, or leaderboard experiences.
+          TapIt may currently use &quot;McGill&quot; to identify certain locations or
+          communities.
         </p>
         <p>
           Unless expressly stated otherwise, TapIt is not an official service of,
           endorsed by, or affiliated with McGill University.
         </p>
         <p>
-          TapIt does not currently independently verify that users appearing in a
-          McGill-labelled leaderboard are students, employees, or otherwise
-          affiliated with McGill University.
+          TapIt does not currently independently verify the university
+          affiliation of users appearing in the General leaderboard.
         </p>
       </section>
 

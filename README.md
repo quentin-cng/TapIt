@@ -51,9 +51,12 @@ require valid values in `.env.local`; the public landing page does not.
    `supabase/migrations/20260923060000_privacy_hardening_and_account_deletion.sql`
    to replace broad profile/location reads with purpose-specific RPCs and add
    secure self-service account deletion.
-9. In the project dashboard, copy the Project URL and public `anon` key into a
+9. Run
+   `supabase/migrations/20260924000000_general_leaderboard_privacy.sql` to add
+   the General leaderboard username preference and its authenticated RPCs.
+10. In the project dashboard, copy the Project URL and public `anon` key into a
    local `.env.local` file using `.env.example` as the template.
-10. Restart `npm run dev` after changing environment variables.
+11. Restart `npm run dev` after changing environment variables.
 
 ## Authentication setup
 
@@ -86,7 +89,7 @@ reliable custom SMTP before a broader public launch.
 
 - `/dashboard` — points, check-in count, and latest check-in
 - `/friends` — username search, mutual requests, and accepted friends
-- `/leaderboard` — friends ranking and global McGill MVP ranking
+- `/leaderboard` — friends ranking and the General global ranking
 - `/profile` — stats, recent activity, legal links, and account settings
 - `/onboarding` — initial weekly training commitment for accounts without one
 - `/recap` — previous completed week for the signed-in user and current friends

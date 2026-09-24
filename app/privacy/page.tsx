@@ -204,8 +204,8 @@ export default function PrivacyPage() {
           users through these features.
         </p>
         <p>
-          TapIt&apos;s current &quot;McGill&quot; leaderboard does not independently verify
-          whether a user is enrolled at or affiliated with McGill University.
+          TapIt&apos;s General leaderboard includes TapIt profiles globally and does
+          not independently verify university affiliation.
         </p>
       </section>
 
