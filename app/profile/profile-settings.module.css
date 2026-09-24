@@ -1,0 +1,264 @@
+.settings {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 14px 40px rgb(17 17 19 / 5%);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 26px;
+}
+
+.header h2 {
+  margin: 5px 0 0;
+  font-size: 1.08rem;
+  letter-spacing: -0.03em;
+}
+
+.headerMark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border: 1px solid #ded5f5;
+  border-radius: 10px;
+  background: #f4f0fd;
+  color: var(--purple);
+}
+
+.headerMark svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.sessionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  border-top: 1px solid var(--border);
+  padding: 22px 26px;
+}
+
+.sessionCopy h3,
+.sessionCopy p {
+  margin: 0;
+}
+
+.sessionCopy h3 {
+  font-size: 0.9rem;
+  letter-spacing: -0.015em;
+}
+
+.sessionCopy p {
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.logoutForm {
+  flex: 0 0 auto;
+}
+
+.logoutButton {
+  min-width: 108px;
+  min-height: 42px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text-primary);
+  padding: 0 18px;
+  font-weight: 700;
+  transition:
+    border-color 0.16s,
+    background-color 0.16s,
+    transform 0.14s;
+}
+
+.logoutButton:hover {
+  border-color: #c5c3ca;
+  background: var(--surface-elevated);
+}
+
+.logoutButton:active {
+  transform: translateY(1px);
+}
+
+.dangerZone {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+  align-items: end;
+  gap: 40px;
+  border-top: 1px solid #efd8dc;
+  background: linear-gradient(90deg, #fffafa 0%, #fff 68%);
+  padding: 26px;
+}
+
+.dangerCopy {
+  align-self: start;
+}
+
+.dangerLabel {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--danger);
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dangerCopy h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.dangerCopy p {
+  max-width: 580px;
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.dangerZone :global(.delete-account-form) {
+  display: grid;
+  width: 100%;
+  max-width: 420px;
+  gap: 9px;
+  justify-self: end;
+}
+
+.dangerZone :global(.delete-account-form label) {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.dangerZone :global(.delete-account-form label strong) {
+  color: var(--text-primary);
+}
+
+.dangerZone :global(.delete-account-form input) {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  padding: 0 13px;
+  outline: none;
+  transition:
+    border-color 0.16s,
+    box-shadow 0.16s;
+}
+
+.dangerZone :global(.delete-account-form input:focus) {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgb(189 52 71 / 10%);
+}
+
+.dangerZone :global(.delete-account-form .form-message) {
+  margin: 0;
+}
+
+.dangerZone :global(.delete-account-button) {
+  min-height: 44px;
+  border: 1px solid var(--danger);
+  border-radius: 9px;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--danger);
+  font-weight: 700;
+  transition:
+    background-color 0.16s,
+    color 0.16s,
+    opacity 0.16s;
+}
+
+.dangerZone :global(.delete-account-button:hover:not(:disabled)) {
+  background: var(--danger);
+  color: #fff;
+}
+
+.dangerZone :global(.delete-account-button:disabled) {
+  border-color: var(--border-strong);
+  cursor: not-allowed;
+  background: #f4f4f2;
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.legalLinks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-top: 1px solid var(--border);
+  background: #fafaf9;
+  padding: 15px 24px;
+  color: var(--text-muted);
+  font-size: 0.69rem;
+}
+
+.legalLinks a {
+  color: inherit;
+  font-weight: 550;
+  transition: color 0.16s;
+}
+
+.legalLinks a:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.legalSeparator {
+  color: var(--border-strong);
+}
+
+@media (max-width: 760px) {
+  .dangerZone {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 22px;
+  }
+
+  .dangerZone :global(.delete-account-form) {
+    max-width: none;
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 430px) {
+  .header,
+  .sessionRow,
+  .dangerZone {
+    padding: 20px 18px;
+  }
+
+  .sessionRow {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .logoutForm,
+  .logoutButton {
+    width: 100%;
+  }
+
+  .legalLinks {
+    flex-wrap: wrap;
+    padding-inline: 18px;
+  }
+}
