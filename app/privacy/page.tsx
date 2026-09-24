@@ -122,6 +122,15 @@ export default function PrivacyPage() {
           The exact information and retention periods may depend on the
           infrastructure provider.
         </p>
+
+        <h3>Website analytics</h3>
+        <p>
+          TapIt uses Vercel Web Analytics to understand aggregate website usage,
+          such as page views, traffic sources and referrers, approximate country
+          or region, browser, operating system, and device-related information.
+          TapIt does not use this analytics feature for advertising or cross-site
+          tracking.
+        </p>
       </section>
 
       <section>
@@ -207,8 +216,9 @@ export default function PrivacyPage() {
           to keep you signed in and protect authenticated areas of the service.
         </p>
         <p>
-          TapIt currently does not use advertising cookies, analytics cookies,
-          tracking pixels, or device fingerprinting.
+          TapIt does not use advertising cookies, tracking pixels, device
+          fingerprinting, or analytics for cross-site tracking. This
+          implementation of Vercel Web Analytics does not use analytics cookies.
         </p>
         <p>Essential authentication cookies are necessary for the service to function.</p>
       </section>
@@ -222,12 +232,13 @@ export default function PrivacyPage() {
           information, authentication data, profiles, points, check-ins, goals,
           friendships, and temporary location-verification inputs.
         </p>
-        <h3>Hosting provider</h3>
+        <h3>Vercel</h3>
         <p>
-          TapIt&apos;s hosting provider, including Vercel where applicable, processes
-          web requests required to provide the application. This may include
-          authentication requests, cookies, IP addresses, request metadata, and
-          information transmitted through server requests.
+          Vercel acts as TapIt&apos;s infrastructure and analytics service provider.
+          It processes web requests required to provide the application and
+          provides the aggregate website-usage information described above. This
+          processing may include IP addresses, request metadata, and information
+          transmitted through server requests.
         </p>
         <h3>Device and browser location services</h3>
         <p>
