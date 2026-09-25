@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildWeeklyRecap,
+  getWeeklyRecapMessage,
   type SocialWeeklyStat,
 } from "../lib/stats/social-weekly";
 
@@ -148,5 +149,47 @@ describe("social weekly recap", () => {
 
     assert.equal(recap.goalsHit.length, 1);
     assert.equal(recap.goalsMissed.length, 0);
+  });
+
+  it("narrates only missed goals and never treats no-goal users as failures", () => {
+    const recap = buildWeeklyRecap([
+      stat({
+        userId: "a",
+        username: "missed",
+        previousGoalAchieved: false,
+      }),
+      stat({
+        userId: "b",
+        username: "no_goal",
+        previousGoal: null,
+        previousGoalAchieved: null,
+      }),
+    ]);
+
+    const message = getWeeklyRecapMessage(recap);
+
+    assert.equal(message, "@missed didn't hit their goal last week.");
+    assert.doesNotMatch(message, /no_goal/);
+  });
+
+  it("uses a positive recap when everyone with a goal succeeded", () => {
+    const recap = buildWeeklyRecap([
+      stat({
+        userId: "a",
+        username: "hit",
+        previousGoalAchieved: true,
+      }),
+      stat({
+        userId: "b",
+        username: "no_goal",
+        previousGoal: null,
+        previousGoalAchieved: null,
+      }),
+    ]);
+
+    assert.equal(
+      getWeeklyRecapMessage(recap),
+      "Everyone with a goal hit it last week.",
+    );
   });
 });

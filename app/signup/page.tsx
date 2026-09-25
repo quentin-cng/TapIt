@@ -26,7 +26,6 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         <div className="auth-heading">
           <p className="kicker">Join TapIt</p>
           <h1>Create account</h1>
-          <p>Show up together.</p>
         </div>
         <AuthForm mode="signup" next={next} />
         <p className="auth-switch">

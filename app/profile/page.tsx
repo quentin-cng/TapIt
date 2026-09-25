@@ -7,7 +7,6 @@ import { GeneralLeaderboardPrivacyForm } from "@/components/general-leaderboard-
 import { PageHeader, ProgressBar } from "@/components/ui";
 import { WeeklyGoalForm } from "@/components/weekly-goal-form";
 import { addCalendarDays, getMontrealWeekStart } from "@/lib/stats/montreal-calendar";
-import { calculateStreakStats, formatDayCount } from "@/lib/stats/streaks";
 import {
   calculateWeeklyGoalStreaks,
   calculateWeeklyProgress,
@@ -23,11 +22,6 @@ type MyProfile = {
   username: string;
   total_points: number;
   created_at: string;
-};
-
-type CheckinLocation = {
-  location_id: string;
-  location_name: string;
 };
 
 export default async function ProfilePage() {
@@ -49,7 +43,7 @@ export default async function ProfilePage() {
     supabase.rpc("get_my_profile").single(),
     supabase
       .from("checkins")
-      .select("location_id, points_awarded, created_at")
+      .select("created_at")
       .eq("user_id", userId)
       .gt("points_awarded", 0)
       .order("created_at", { ascending: false }),
@@ -91,36 +85,15 @@ export default async function ProfilePage() {
     checkins.map((checkin) => checkin.created_at),
     schedules,
   );
-  const streaks = calculateStreakStats(
-    checkins.map((checkin) => checkin.created_at),
-  );
-  const recentCheckins = checkins.slice(0, 5);
-  const recentLocationIds = [
-    ...new Set(recentCheckins.map((checkin) => checkin.location_id)),
-  ];
-  const locationsResult = recentLocationIds.length
-    ? await supabase.rpc("get_my_checkin_locations")
-    : { data: [], error: null };
-  const locationNames = new Map<string, string>(
-    ((locationsResult.data ?? []) as CheckinLocation[]).map((location) => [
-      location.location_id,
-      location.location_name,
-    ]),
-  );
   const hasDataError =
     profileError ||
     checkinsResult.error ||
     schedulesResult.error ||
-    leaderboardPreferenceResult.error ||
-    locationsResult.error;
+    leaderboardPreferenceResult.error;
 
   return (
     <AppShell className="profile-page">
-      <PageHeader
-        description="Your commitment, history, and account."
-        eyebrow="Account"
-        title="Profile"
-      />
+      <PageHeader eyebrow="Account" title="Profile" />
 
       <section className="profile-card profile-summary-card">
         {profileError || !profile ? (
@@ -204,67 +177,6 @@ export default async function ProfilePage() {
               </div>
             </section>
           ) : null}
-
-          <section className="profile-stats" aria-label="Profile statistics">
-            <article>
-              <span>Daily activity streak</span>
-              <strong>
-                {streaks.currentStreak > 0 ? "🔥 " : ""}
-                {formatDayCount(streaks.currentStreak)}
-              </strong>
-            </article>
-            <article>
-              <span>Longest streak</span>
-              <strong>{formatDayCount(streaks.longestStreak)}</strong>
-            </article>
-            <article>
-              <span>Check-ins</span>
-              <strong>{checkins.length}</strong>
-            </article>
-            <article>
-              <span>Active days</span>
-              <strong>{streaks.activeDays}</strong>
-            </article>
-          </section>
-
-          <section className="recent-activity-card">
-            <div className="section-heading">
-              <div>
-                <p className="section-label">Activity</p>
-                <h2>Recent check-ins</h2>
-              </div>
-            </div>
-            {recentCheckins.length ? (
-              <ol className="activity-list">
-                {recentCheckins.map((checkin, index) => (
-                  <li key={`${checkin.created_at}-${index}`}>
-                    <div>
-                      <strong>
-                        {locationNames.get(checkin.location_id) ??
-                          "TapIt location"}
-                      </strong>
-                      <small>
-                        {new Intl.DateTimeFormat("en-CA", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                          timeZone: "America/Montreal",
-                        }).format(new Date(checkin.created_at))}
-                      </small>
-                    </div>
-                    <strong className="activity-points">
-                      +{checkin.points_awarded}
-                    </strong>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <div className="social-empty compact">
-                <span aria-hidden="true">⌁</span>
-                <h3>No check-ins yet.</h3>
-                <p>Your first rewarded visit will appear here.</p>
-              </div>
-            )}
-          </section>
 
           <section className={styles.settings}>
             <div className={styles.header}>

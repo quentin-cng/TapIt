@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { GeneralLeaderboardPrivacyForm } from "@/components/general-leaderboard-privacy-form";
+import { TapItMascotSpeech } from "@/components/tapit-mascot-speech";
 import { PageHeader } from "@/components/ui";
+import {
+  getFriendsLeaderboardCommentary,
+  getGeneralLeaderboardCommentary,
+} from "@/lib/stats/leaderboard-commentary";
 import { mapSocialWeeklyStats } from "@/lib/stats/social-weekly";
 import { createClient } from "@/lib/supabase/server";
 
@@ -54,6 +60,7 @@ export default async function LeaderboardPage({
 
   let profiles: LeaderboardProfile[] = [];
   let loadError = Boolean(goalError);
+  let generalPreference = true;
 
   if (activeView === "friends") {
     const { data, error } = await supabase.rpc("get_social_weekly_stats");
@@ -77,23 +84,36 @@ export default async function LeaderboardPage({
         );
     }
   } else {
-    const { data, error } = await supabase.rpc("get_global_leaderboard", {
-      p_limit: 100,
-    });
+    const [leaderboardResult, preferenceResult] = await Promise.all([
+      supabase.rpc("get_global_leaderboard", { p_limit: 100 }),
+      supabase.rpc("get_my_general_leaderboard_preference"),
+    ]);
 
-    profiles = ((data ?? []) as GlobalLeaderboardRow[]).map((profile) => ({
-      key: String(profile.rank_position),
-      username: profile.username,
-      total_points: profile.total_points,
-      is_current_user: profile.is_current_user,
-    }));
-    loadError = Boolean(error);
+    profiles = ((leaderboardResult.data ?? []) as GlobalLeaderboardRow[]).map(
+      (profile) => ({
+        key: String(profile.rank_position),
+        username: profile.username,
+        total_points: profile.total_points,
+        is_current_user: profile.is_current_user,
+      }),
+    );
+    generalPreference = preferenceResult.data !== false;
+    loadError = Boolean(leaderboardResult.error || preferenceResult.error);
   }
+
+  const commentaryEntries = profiles.map((profile) => ({
+    username: profile.username,
+    totalPoints: profile.total_points,
+    isCurrentUser: profile.is_current_user === true,
+  }));
+  const commentary =
+    activeView === "friends"
+      ? getFriendsLeaderboardCommentary(commentaryEntries)
+      : getGeneralLeaderboardCommentary(commentaryEntries);
 
   return (
     <AppShell className="leaderboard-page">
       <PageHeader
-        description="Points, consistency, and the people who keep showing up."
         eyebrow="Standings"
         title="Leaderboard"
       />
@@ -115,6 +135,10 @@ export default async function LeaderboardPage({
         </Link>
       </nav>
 
+      <TapItMascotSpeech className="leaderboard-commentary">
+        {commentary}
+      </TapItMascotSpeech>
+
       <section className="leaderboard-card">
         <div className="leaderboard-heading">
           <div>
@@ -125,9 +149,17 @@ export default async function LeaderboardPage({
               {activeView === "friends" ? "Friends ranking" : "Top 100"}
             </h2>
           </div>
-          <div className="leaderboard-column-labels">
-            <span>Points</span>
-            {activeView === "friends" ? <span>Best</span> : null}
+          <div className="leaderboard-heading-tools">
+            {activeView === "general" ? (
+              <GeneralLeaderboardPrivacyForm
+                compact
+                initialValue={generalPreference}
+              />
+            ) : null}
+            <div className="leaderboard-column-labels">
+              <span>Points</span>
+              {activeView === "friends" ? <span>Best</span> : null}
+            </div>
           </div>
         </div>
 

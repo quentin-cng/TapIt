@@ -1,0 +1,54 @@
+.mascot {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  flex: 0 0 auto;
+  aspect-ratio: 3 / 2;
+  contain: layout;
+}
+
+.brand {
+  width: 54px;
+}
+
+.small {
+  width: clamp(58px, 5vw, 68px);
+}
+
+.speech {
+  width: clamp(62px, 5.5vw, 80px);
+}
+
+.medium {
+  width: clamp(88px, 8vw, 116px);
+}
+
+.large {
+  width: clamp(120px, 13vw, 166px);
+}
+
+.image {
+  object-fit: contain;
+}
+
+@media (max-width: 480px) {
+  .brand {
+    width: 48px;
+  }
+
+  .small {
+    width: 58px;
+  }
+
+  .speech {
+    width: 62px;
+  }
+
+  .medium {
+    width: 88px;
+  }
+
+  .large {
+    width: 124px;
+  }
+}

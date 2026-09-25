@@ -26,7 +26,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <div className="auth-heading">
           <p className="kicker">Welcome back</p>
           <h1>Log in</h1>
-          <p>Show up together.</p>
         </div>
         <AuthForm mode="login" initialError={error} next={next} />
         <p className="auth-switch">

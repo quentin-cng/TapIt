@@ -94,6 +94,12 @@ button {
 .wordmark span {
   color: var(--purple);
 }
+.tapit-brand-lockup {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
 .eyebrow-label,
 .section-label,
 .kicker {
@@ -202,8 +208,6 @@ button {
 .leaderboard-card,
 .profile-card,
 .weekly-goal-card,
-.recent-activity-card,
-.recap-summary-card,
 .recap-highlights article,
 .recap-section,
 .error-card {
@@ -832,6 +836,7 @@ button:disabled {
 
 /* Home */
 .dashboard-greeting {
+  min-width: 0;
   margin: 0 0 clamp(32px, 5vw, 56px);
 }
 .dashboard-greeting p {
@@ -1197,11 +1202,14 @@ button:disabled {
 }
 
 /* Leaderboard */
+.leaderboard-page .page-header {
+  margin-bottom: clamp(18px, 2.5vw, 24px);
+}
 .leaderboard-tabs {
   display: grid;
   width: min(100%, 330px);
   grid-template-columns: 1fr 1fr;
-  margin: 0 0 32px auto;
+  margin: 0 0 12px auto;
   border-bottom: 1px solid var(--border);
 }
 .leaderboard-tabs a {
@@ -1231,6 +1239,14 @@ button:disabled {
 .leaderboard-heading h2 {
   margin: 4px 0 0;
   font-size: 1rem;
+}
+.leaderboard-heading-tools {
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+.leaderboard-commentary {
+  margin: 0 0 12px;
 }
 .leaderboard-column-labels,
 .leaderboard-row-stats {
@@ -1377,8 +1393,7 @@ button:disabled {
   border-left: 1px solid var(--border);
   padding-left: 16px;
 }
-.weekly-streak-summary strong,
-.profile-stats strong {
+.weekly-streak-summary strong {
   color: var(--text-primary);
   font-size: 1rem;
 }
@@ -1403,103 +1418,24 @@ button:disabled {
   padding: 10px 12px;
   color: var(--purple-dark) !important;
 }
-.profile-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-top: 1px solid var(--border);
-}
-.profile-stats article {
-  display: grid;
-  min-width: 0;
-  gap: 8px;
-  border-bottom: 1px solid var(--border);
-  padding: 16px 0;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-}
-.profile-stats article:nth-child(odd) {
-  padding-right: 16px;
-}
-.profile-stats article:nth-child(even) {
-  border-left: 1px solid var(--border);
-  padding-left: 16px;
-}
-.profile-stats span {
-  color: var(--text-secondary);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-.activity-list {
-  margin: 16px 0 0;
-  border-top: 1px solid var(--border);
-  padding: 0;
-  list-style: none;
-}
-.activity-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border-bottom: 1px solid var(--border);
-  padding: 15px 0;
-}
-.activity-list li > div {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
-}
-.activity-list li > div strong {
-  overflow: hidden;
-  font-size: 0.78rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.activity-list small {
-  color: var(--text-secondary);
-  font-size: 0.73rem;
-}
-.activity-points {
-  color: var(--purple);
-  font-size: 0.78rem;
-}
-
 /* Recap */
-.recap-summary-card {
-  border-top: 0;
-  padding-top: 0;
-}
-.recap-summary-lead {
-  margin: 16px 0 4px;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-}
-.recap-summary-card h2 {
-  margin: 0;
-  font-size: clamp(1.8rem, 7vw, 3rem);
-  letter-spacing: -0.06em;
-  line-height: 1;
-}
-.recap-summary-card > p:last-child {
-  margin: 12px 0 0;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
+.recap-commentary {
+  margin-bottom: 2px;
 }
 .recap-highlights {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-top: 1px solid var(--border);
+  gap: 16px;
 }
 .recap-highlights article {
   display: grid;
   min-width: 0;
-  gap: 8px;
-  border: 0;
-  padding: 24px 0;
-}
-.recap-highlights article + article {
-  border-left: 1px solid var(--border);
-  padding-left: 16px;
+  align-content: start;
+  gap: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: clamp(20px, 4vw, 30px);
 }
 .recap-highlights span {
   color: var(--text-secondary);
@@ -1509,13 +1445,33 @@ button:disabled {
   letter-spacing: 0.08em;
 }
 .recap-highlights strong {
+  min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 0.92rem;
+  font-size: clamp(1.15rem, 3.5vw, 1.75rem);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
 }
 .recap-highlights small {
   color: var(--purple);
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   font-weight: 700;
+}
+.recap-section {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(20px, 4vw, 28px);
+}
+.recap-section.hit {
+  border-color: #bddfc9;
+  background: #f5fbf7;
+}
+.recap-section.missed {
+  border-color: #edc8ce;
+  background: #fff7f8;
+}
+.recap-section .section-heading h2 {
+  font-size: clamp(1.15rem, 3vw, 1.45rem);
 }
 .recap-people {
   margin-top: 16px;
@@ -1549,10 +1505,6 @@ button:disabled {
 .recap-person.missed .recap-status-mark {
   background: #f9e9ec;
   color: var(--danger);
-}
-.recap-person.none .recap-status-mark {
-  background: var(--surface-elevated);
-  color: var(--text-muted);
 }
 .recap-person > div {
   display: grid;
@@ -1777,6 +1729,24 @@ button:disabled {
     grid-template-columns: minmax(56px, auto) minmax(38px, auto);
     gap: 8px;
   }
+  .leaderboard-heading {
+    align-items: flex-start;
+  }
+  .leaderboard-heading-tools {
+    max-width: 58%;
+  }
+  .leaderboard-page .page-header {
+    margin-bottom: 18px;
+  }
+  .leaderboard-tabs {
+    margin-bottom: 10px;
+  }
+  .leaderboard-commentary {
+    margin-bottom: 12px;
+  }
+  .recap-highlights {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 430px) {
   .mobile-nav a {
@@ -1836,7 +1806,7 @@ button:disabled {
     background: #fbfbfa;
     padding: 34px 16px 24px;
   }
-  .desktop-sidebar .wordmark {
+  .desktop-sidebar .tapit-brand-lockup {
     margin: 0 12px 48px;
   }
   .desktop-sidebar nav {
@@ -1893,13 +1863,6 @@ button:disabled {
     letter-spacing: 0.07em;
     text-transform: uppercase;
   }
-  .sidebar-manifesto span {
-    color: var(--text-muted);
-    font-size: 0.58rem;
-    letter-spacing: 0.06em;
-    line-height: 1.6;
-    text-transform: uppercase;
-  }
   .mobile-nav,
   .mobile-topbar {
     display: none;
@@ -1928,14 +1891,7 @@ button:disabled {
   }
   .weekly-goal-card {
     grid-column: 2;
-    grid-row: 2 / span 2;
-  }
-  .profile-stats {
-    grid-column: 1;
-    grid-row: 3;
-  }
-  .recent-activity-card {
-    grid-column: 1/-1;
+    grid-row: 2;
   }
   .recap-page {
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -1943,18 +1899,17 @@ button:disabled {
   .recap-page .page-header {
     grid-column: 1/-1;
   }
-  .recap-summary-card {
-    grid-column: span 6;
+  .recap-commentary {
+    grid-column: 1/-1;
   }
   .recap-highlights {
-    grid-column: span 6;
+    grid-column: 1/-1;
   }
   .recap-section.hit {
-    grid-column: span 7;
+    grid-column: span 6;
   }
-  .recap-section.missed,
-  .recap-section.neutral {
-    grid-column: span 5;
+  .recap-section.missed {
+    grid-column: span 6;
   }
 }
 @media (min-width: 1280px) {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { TapItWordmark } from "./tapit-wordmark";
+import { TapItBrand } from "./tapit-brand";
 
 type IconName = "home" | "friends" | "leaderboard" | "recap" | "profile";
 
@@ -90,19 +90,18 @@ export function AppShell({
   return (
     <div className="app-frame">
       <aside className="desktop-sidebar">
-        <TapItWordmark />
+        <TapItBrand />
         <nav aria-label="Primary navigation">
           <NavigationLinks />
         </nav>
         <div className="sidebar-manifesto" aria-hidden="true">
-          <strong>Show up together.</strong>
-          <span>Commit. Tap. Earn. Repeat.</span>
+          <strong>TAP FOR POINTS</strong>
         </div>
       </aside>
 
       <main className={`app-main ${className}`.trim()}>
         <div className="mobile-topbar">
-          <TapItWordmark />
+          <TapItBrand />
         </div>
         {children}
       </main>

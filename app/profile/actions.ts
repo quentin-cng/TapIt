@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 export type GeneralLeaderboardPreferenceState = {
   status: "idle" | "success" | "error";
   message: string;
+  showUsername?: boolean;
 };
 
 export type DeleteAccountState = {
@@ -61,7 +62,8 @@ export async function updateGeneralLeaderboardPreference(
 
   return {
     status: "success",
-    message: "General leaderboard privacy updated.",
+    message: "Saved",
+    showUsername: visibility === "true",
   };
 }
 

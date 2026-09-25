@@ -113,7 +113,6 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
   return (
     <AppShell className="friends-page">
       <PageHeader
-        description="Weekly accountability with the people who keep you moving."
         eyebrow="Your crew"
         title="Friends"
       />

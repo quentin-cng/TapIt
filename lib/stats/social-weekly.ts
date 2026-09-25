@@ -126,3 +126,29 @@ export function buildWeeklyRecap(
     bestStreak: tiedLeaders(stats, (stat) => stat.bestWeeklyGoalStreak),
   };
 }
+
+function recapUsername(username: string) {
+  return `@${username}`;
+}
+
+export function getWeeklyRecapMessage(recap: WeeklyRecap) {
+  const missedNames = recap.goalsMissed.map((stat) =>
+    recapUsername(stat.username),
+  );
+
+  if (missedNames.length === 0) {
+    return recap.eligibleCount > 0
+      ? "Everyone with a goal hit it last week."
+      : "No completed goals were available to recap last week.";
+  }
+
+  if (missedNames.length === 1) {
+    return `${missedNames[0]} didn't hit their goal last week.`;
+  }
+
+  if (missedNames.length === 2) {
+    return `${missedNames[0]} and ${missedNames[1]} didn't hit their goals last week.`;
+  }
+
+  return `${missedNames[0]}, ${missedNames[1]}, and ${missedNames.length - 2} others didn't hit their goals last week.`;
+}

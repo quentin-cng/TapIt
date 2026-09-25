@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { TapItMascotSpeech } from "@/components/tapit-mascot-speech";
 import { PageHeader } from "@/components/ui";
 import { addCalendarDays } from "@/lib/stats/montreal-calendar";
 import {
   buildWeeklyRecap,
+  getWeeklyRecapMessage,
   mapSocialWeeklyStats,
   type SocialWeeklyStat,
 } from "@/lib/stats/social-weekly";
@@ -28,7 +30,7 @@ function RecapRows({
   userId,
 }: {
   stats: SocialWeeklyStat[];
-  status: "hit" | "missed" | "none";
+  status: "hit" | "missed";
   userId: string;
 }) {
   if (stats.length === 0) {
@@ -43,7 +45,7 @@ function RecapRows({
           key={stat.userId}
         >
           <span className="recap-status-mark" aria-hidden="true">
-            {status === "hit" ? "✓" : status === "missed" ? "●" : "–"}
+            {status === "hit" ? "✓" : "●"}
           </span>
           <div>
             <strong>
@@ -51,9 +53,7 @@ function RecapRows({
               {stat.userId === userId ? <small>You</small> : null}
             </strong>
             <span>
-              {stat.previousGoal === null
-                ? "No goal set last week"
-                : `${stat.previousSessions} / ${stat.previousGoal} sessions`}
+              {stat.previousSessions} / {stat.previousGoal} sessions
             </span>
           </div>
           <strong className="recap-row-points">
@@ -87,6 +87,8 @@ export default async function RecapPage() {
   const previousWeek = stats[0]?.previousWeekStart;
   const pointsValue = recap.mostPoints[0]?.previousWeekPoints ?? 0;
   const streakValue = recap.bestStreak[0]?.bestWeeklyGoalStreak ?? 0;
+  const hasGoalResults =
+    recap.goalsHit.length > 0 || recap.goalsMissed.length > 0;
 
   return (
     <AppShell className="recap-page">
@@ -107,75 +109,79 @@ export default async function RecapPage() {
         </p>
       ) : (
         <>
-          <section className="recap-summary-card">
-            <p className="section-label">Your crew</p>
-            <p className="recap-summary-lead">Your crew showed up.</p>
-            {recap.eligibleCount ? (
-              <h2>
-                {recap.achievedCount} / {recap.eligibleCount} hit their goals
-              </h2>
-            ) : (
-              <h2>No completed goals to judge last week</h2>
-            )}
-            {recap.noGoal.length ? (
-              <p>
-                {recap.noGoal.length} {recap.noGoal.length === 1 ? "person had" : "people had"} no goal set.
-              </p>
-            ) : null}
-          </section>
+          <TapItMascotSpeech
+            className="recap-commentary"
+            detail={
+              hasGoalResults
+                ? `${recap.achievedCount} / ${recap.eligibleCount} goals hit`
+                : undefined
+            }
+          >
+            {getWeeklyRecapMessage(recap)}
+          </TapItMascotSpeech>
 
-          <section className="recap-highlights" aria-label="Weekly highlights">
-            <article>
-              <span>Most points</span>
-              <strong>
-                {recap.mostPoints.map((stat) => `@${stat.username}`).join(", ")}
-              </strong>
-              <small>+{pointsValue} pts last week</small>
-            </article>
-            <article>
-              <span>Best weekly streak</span>
-              <strong>
-                {recap.bestStreak.map((stat) => `@${stat.username}`).join(", ")}
-              </strong>
-              <small>
-                {streakValue} {streakValue === 1 ? "week" : "weeks"}
-              </small>
-            </article>
-          </section>
+          {hasGoalResults ? (
+            <>
+              <section className="recap-section hit">
+                <div className="section-heading">
+                  <div>
+                    <p className="section-label">Goals hit</p>
+                    <h2>Commitments completed</h2>
+                  </div>
+                </div>
+                <RecapRows stats={recap.goalsHit} status="hit" userId={userId} />
+              </section>
 
-          <section className="recap-section hit">
-            <div className="section-heading">
-              <div>
-                <p className="section-label">Goals hit</p>
-                <h2>Commitments completed</h2>
-              </div>
-            </div>
-            <RecapRows stats={recap.goalsHit} status="hit" userId={userId} />
-          </section>
+              <section className="recap-section missed">
+                <div className="section-heading">
+                  <div>
+                    <p className="section-label">Missed</p>
+                    <h2>Goals not reached</h2>
+                  </div>
+                </div>
+                <RecapRows
+                  stats={recap.goalsMissed}
+                  status="missed"
+                  userId={userId}
+                />
+              </section>
 
-          <section className="recap-section missed">
-            <div className="section-heading">
-              <div>
-                <p className="section-label">Missed</p>
-                <h2>Goals not reached</h2>
-              </div>
-            </div>
-            <RecapRows
-              stats={recap.goalsMissed}
-              status="missed"
-              userId={userId}
-            />
-          </section>
+              <section
+                className="recap-highlights"
+                aria-label="Weekly highlights"
+              >
+                <article>
+                  <span>Most points</span>
+                  <strong>
+                    {recap.mostPoints.length
+                      ? recap.mostPoints
+                          .map((stat) => `@${stat.username}`)
+                          .join(", ")
+                      : "No result"}
+                  </strong>
+                  <small>
+                    {recap.mostPoints.length ? `+${pointsValue} pts` : "—"}
+                  </small>
+                </article>
+                <article>
+                  <span>Best weekly streak</span>
+                  <strong>
+                    {recap.bestStreak.length
+                      ? recap.bestStreak
+                          .map((stat) => `@${stat.username}`)
+                          .join(", ")
+                      : "No result"}
+                  </strong>
+                  <small>
+                    {recap.bestStreak.length
+                      ? `${streakValue} ${streakValue === 1 ? "week" : "weeks"}`
+                      : "—"}
+                  </small>
+                </article>
+              </section>
+            </>
+          ) : null}
 
-          <section className="recap-section neutral">
-            <div className="section-heading">
-              <div>
-                <p className="section-label">No goal</p>
-                <h2>No commitment recorded</h2>
-              </div>
-            </div>
-            <RecapRows stats={recap.noGoal} status="none" userId={userId} />
-          </section>
         </>
       )}
 

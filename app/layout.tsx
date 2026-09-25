@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "TapIt — Show up together",
+  title: "TapIt — Tap for points",
   description: "Social accountability for university fitness communities.",
 };
 
