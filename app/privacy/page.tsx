@@ -30,6 +30,7 @@ export default function PrivacyPage() {
         </p>
         <ul>
           <li>your email address;</li>
+          <li>your display name;</li>
           <li>your username;</li>
           <li>authentication credentials;</li>
           <li>a unique account identifier; and</li>
@@ -184,8 +185,9 @@ export default function PrivacyPage() {
         <h2>4. Social Features and Visibility</h2>
         <p>TapIt includes social and leaderboard functionality.</p>
         <p>
-          Your username and total points may be visible to other authenticated
-          TapIt users through features such as leaderboards and user search.
+          Your display name, username, and total points may be visible to other
+          authenticated TapIt users through features such as leaderboards and
+          user search.
         </p>
         <p>
           Accepted friends may additionally see limited fitness-related

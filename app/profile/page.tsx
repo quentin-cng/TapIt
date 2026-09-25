@@ -4,6 +4,7 @@ import { logout } from "@/app/dashboard/actions";
 import { AppShell } from "@/components/app-shell";
 import { DeleteAccountForm } from "@/components/delete-account-form";
 import { GeneralLeaderboardPrivacyForm } from "@/components/general-leaderboard-privacy-form";
+import { ProfileIdentityForm } from "@/components/profile-identity-form";
 import { PageHeader, ProgressBar } from "@/components/ui";
 import { WeeklyGoalForm } from "@/components/weekly-goal-form";
 import { addCalendarDays, getMontrealWeekStart } from "@/lib/stats/montreal-calendar";
@@ -16,9 +17,11 @@ import {
   type WeeklyGoalSchedule,
 } from "@/lib/stats/weekly-goals";
 import { createClient } from "@/lib/supabase/server";
+import { resolveDisplayName } from "@/lib/profile-identity";
 import styles from "./profile-settings.module.css";
 
 type MyProfile = {
+  display_name: string | null;
   username: string;
   total_points: number;
   created_at: string;
@@ -90,6 +93,9 @@ export default async function ProfilePage() {
     checkinsResult.error ||
     schedulesResult.error ||
     leaderboardPreferenceResult.error;
+  const displayName = profile
+    ? resolveDisplayName(profile.display_name, profile.username)
+    : "";
 
   return (
     <AppShell className="profile-page">
@@ -103,9 +109,10 @@ export default async function ProfilePage() {
         ) : (
           <>
             <span className="profile-avatar" aria-hidden="true">
-              {profile.username.charAt(0).toUpperCase()}
+              {displayName.charAt(0).toUpperCase()}
             </span>
-            <h2>@{profile.username}</h2>
+            <h2>{displayName}</h2>
+            <p>@{profile.username}</p>
             <p>{profile.total_points} total points</p>
             <small>
               Member since{" "}
@@ -190,6 +197,11 @@ export default async function ProfilePage() {
                 </svg>
               </span>
             </div>
+
+            <ProfileIdentityForm
+              displayName={displayName}
+              username={profile.username}
+            />
 
             <div className={styles.sessionRow}>
               <div className={styles.sessionCopy}>

@@ -63,19 +63,19 @@ export function GeneralLeaderboardPrivacyForm({
       <div className={styles.copy}>
         <h3>
           {compact
-            ? "Show my username"
-            : "Show my username on the General leaderboard"}
+            ? "Show my name"
+            : "Show my name on the General leaderboard"}
         </h3>
         {!compact ? (
           <p>
             When disabled, your points and ranking remain visible, but your
-            username appears as Anonymous.
+            identity appears as Anonymous.
           </p>
         ) : null}
       </div>
       <div className={styles.controls}>
         <label className={styles.switch}>
-          <span className="sr-only">Show my username</span>
+          <span className="sr-only">Show my name</span>
           <input
             checked={showUsername}
             disabled={pending}

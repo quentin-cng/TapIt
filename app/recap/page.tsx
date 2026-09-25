@@ -49,9 +49,10 @@ function RecapRows({
           </span>
           <div>
             <strong>
-              @{stat.username}
+              {stat.displayName}
               {stat.userId === userId ? <small>You</small> : null}
             </strong>
+            <small className="recap-username">@{stat.username}</small>
             <span>
               {stat.previousSessions} / {stat.previousGoal} sessions
             </span>
@@ -145,42 +146,39 @@ export default async function RecapPage() {
                   userId={userId}
                 />
               </section>
-
-              <section
-                className="recap-highlights"
-                aria-label="Weekly highlights"
-              >
-                <article>
-                  <span>Most points</span>
-                  <strong>
-                    {recap.mostPoints.length
-                      ? recap.mostPoints
-                          .map((stat) => `@${stat.username}`)
-                          .join(", ")
-                      : "No result"}
-                  </strong>
-                  <small>
-                    {recap.mostPoints.length ? `+${pointsValue} pts` : "—"}
-                  </small>
-                </article>
-                <article>
-                  <span>Best weekly streak</span>
-                  <strong>
-                    {recap.bestStreak.length
-                      ? recap.bestStreak
-                          .map((stat) => `@${stat.username}`)
-                          .join(", ")
-                      : "No result"}
-                  </strong>
-                  <small>
-                    {recap.bestStreak.length
-                      ? `${streakValue} ${streakValue === 1 ? "week" : "weeks"}`
-                      : "—"}
-                  </small>
-                </article>
-              </section>
             </>
           ) : null}
+
+          <section className="recap-highlights" aria-label="Weekly highlights">
+            <article>
+              <span>Most points</span>
+              <strong>
+                {recap.mostPoints.length
+                  ? recap.mostPoints
+                      .map((stat) => stat.displayName)
+                      .join(", ")
+                  : "No result"}
+              </strong>
+              <small>
+                {recap.mostPoints.length ? `+${pointsValue} pts` : "—"}
+              </small>
+            </article>
+            <article>
+              <span>Best weekly streak</span>
+              <strong>
+                {recap.bestStreak.length
+                  ? recap.bestStreak
+                      .map((stat) => stat.displayName)
+                      .join(", ")
+                  : "No result"}
+              </strong>
+              <small>
+                {recap.bestStreak.length
+                  ? `${streakValue} ${streakValue === 1 ? "week" : "weeks"}`
+                  : "—"}
+              </small>
+            </article>
+          </section>
 
         </>
       )}

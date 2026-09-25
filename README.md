@@ -53,10 +53,13 @@ require valid values in `.env.local`; the public landing page does not.
    secure self-service account deletion.
 9. Run
    `supabase/migrations/20260924000000_general_leaderboard_privacy.sql` to add
-   the General leaderboard username preference and its authenticated RPCs.
-10. In the project dashboard, copy the Project URL and public `anon` key into a
+   the General leaderboard identity preference and its authenticated RPCs.
+10. Run `supabase/migrations/20260924010000_display_names.sql` to add validated
+    display names, backfill existing profiles, and update the controlled social
+    RPCs and profile identity update boundary.
+11. In the project dashboard, copy the Project URL and public `anon` key into a
    local `.env.local` file using `.env.example` as the template.
-11. Restart `npm run dev` after changing environment variables.
+12. Restart `npm run dev` after changing environment variables.
 
 ## Authentication setup
 
@@ -202,8 +205,9 @@ key should be added only if a later server-only feature truly needs one.
 ## Database behavior
 
 - A database trigger creates one profile whenever Supabase Auth creates a user.
-  Signup metadata may contain a lowercase `username`; otherwise the trigger
-  assigns a temporary unique username.
+  Signup metadata may contain a display name and lowercase `username`; both are
+  validated in PostgreSQL, with safe username-derived fallbacks for malformed
+  or older clients.
 - `perform_checkin(token, latitude, longitude, accuracy)` is the only application
   path that can insert a rewarded check-in or change points. It validates any
   required venue geofence, awards 10 points, atomically adds any newly earned

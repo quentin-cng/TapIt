@@ -1,5 +1,8 @@
+import { resolveDisplayName } from "@/lib/profile-identity";
+
 export type SocialWeeklyStat = {
   userId: string;
+  displayName: string;
   username: string;
   totalPoints: number;
   currentWeekStart: string;
@@ -17,6 +20,7 @@ export type SocialWeeklyStat = {
 
 type SocialWeeklyRpcRow = {
   participant_user_id: string;
+  display_name: string | null;
   username: string;
   total_points: number;
   current_week_start: string;
@@ -50,6 +54,7 @@ function isRpcRow(value: unknown): value is SocialWeeklyRpcRow {
   const row = value as Partial<SocialWeeklyRpcRow>;
   return (
     typeof row.participant_user_id === "string" &&
+    (typeof row.display_name === "string" || row.display_name === null) &&
     typeof row.username === "string" &&
     typeof row.total_points === "number" &&
     typeof row.current_week_start === "string" &&
@@ -69,6 +74,7 @@ export function mapSocialWeeklyStats(data: unknown): SocialWeeklyStat[] {
 
   return data.filter(isRpcRow).map((row) => ({
     userId: row.participant_user_id,
+    displayName: resolveDisplayName(row.display_name, row.username),
     username: row.username,
     totalPoints: row.total_points,
     currentWeekStart: row.current_week_start,
@@ -127,14 +133,8 @@ export function buildWeeklyRecap(
   };
 }
 
-function recapUsername(username: string) {
-  return `@${username}`;
-}
-
 export function getWeeklyRecapMessage(recap: WeeklyRecap) {
-  const missedNames = recap.goalsMissed.map((stat) =>
-    recapUsername(stat.username),
-  );
+  const missedNames = recap.goalsMissed.map((stat) => stat.displayName);
 
   if (missedNames.length === 0) {
     return recap.eligibleCount > 0

@@ -1,12 +1,8 @@
 export type LeaderboardCommentaryEntry = {
-  username: string;
+  displayName: string;
   totalPoints: number;
   isCurrentUser: boolean;
 };
-
-function displayUsername(username: string) {
-  return username === "Anonymous" ? username : `@${username}`;
-}
 
 export function getFriendsLeaderboardCommentary(
   rankedEntries: readonly LeaderboardCommentaryEntry[],
@@ -20,12 +16,12 @@ export function getFriendsLeaderboardCommentary(
   const topFriend = friends[0];
 
   if (friends.length === 1) {
-    return `${displayUsername(topFriend.username)} is your highest-ranked friend with ${topFriend.totalPoints} points!`;
+    return `${topFriend.displayName} is your highest-ranked friend with ${topFriend.totalPoints} points!`;
   }
 
   const bottomFriend = friends[friends.length - 1];
-  const topName = displayUsername(topFriend.username);
-  const bottomName = displayUsername(bottomFriend.username);
+  const topName = topFriend.displayName;
+  const bottomName = bottomFriend.displayName;
 
   if (topFriend.totalPoints === bottomFriend.totalPoints) {
     return friends.length === 2
@@ -45,5 +41,5 @@ export function getGeneralLeaderboardCommentary(
     return "The first TapIt points will set the pace.";
   }
 
-  return `${displayUsername(leader.username)} is leading TapIt with ${leader.totalPoints} points!`;
+  return `${leader.displayName} is leading TapIt with ${leader.totalPoints} points!`;
 }

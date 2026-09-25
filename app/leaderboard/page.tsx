@@ -9,6 +9,7 @@ import {
   getGeneralLeaderboardCommentary,
 } from "@/lib/stats/leaderboard-commentary";
 import { mapSocialWeeklyStats } from "@/lib/stats/social-weekly";
+import { resolveDisplayName } from "@/lib/profile-identity";
 import { createClient } from "@/lib/supabase/server";
 
 type LeaderboardPageProps = {
@@ -17,7 +18,8 @@ type LeaderboardPageProps = {
 
 type LeaderboardProfile = {
   key: string;
-  username: string;
+  display_name: string;
+  username: string | null;
   total_points: number;
   is_current_user?: boolean;
   best_weekly_goal_streak?: number;
@@ -25,7 +27,8 @@ type LeaderboardProfile = {
 
 type GlobalLeaderboardRow = {
   rank_position: number;
-  username: string;
+  display_name: string | null;
+  username: string | null;
   total_points: number;
   is_current_user: boolean;
 };
@@ -72,6 +75,7 @@ export default async function LeaderboardPage({
       profiles = socialStats
         .map((stat) => ({
           key: stat.userId,
+          display_name: stat.displayName,
           username: stat.username,
           total_points: stat.totalPoints,
           is_current_user: stat.userId === userId,
@@ -92,6 +96,13 @@ export default async function LeaderboardPage({
     profiles = ((leaderboardResult.data ?? []) as GlobalLeaderboardRow[]).map(
       (profile) => ({
         key: String(profile.rank_position),
+        display_name:
+          profile.display_name === "Anonymous"
+            ? "Anonymous"
+            : resolveDisplayName(
+                profile.display_name,
+                profile.username ?? "Anonymous",
+              ),
         username: profile.username,
         total_points: profile.total_points,
         is_current_user: profile.is_current_user,
@@ -102,7 +113,7 @@ export default async function LeaderboardPage({
   }
 
   const commentaryEntries = profiles.map((profile) => ({
-    username: profile.username,
+    displayName: profile.display_name,
     totalPoints: profile.total_points,
     isCurrentUser: profile.is_current_user === true,
   }));
@@ -179,11 +190,10 @@ export default async function LeaderboardPage({
                 >
                   <span className="leaderboard-rank">{index + 1}</span>
                   <div className="leaderboard-user">
-                    <strong>
-                      {profile.username === "Anonymous"
-                        ? profile.username
-                        : `@${profile.username}`}
-                    </strong>
+                    <div className="leaderboard-identity">
+                      <strong>{profile.display_name}</strong>
+                      {profile.username ? <span>@{profile.username}</span> : null}
+                    </div>
                     {isCurrentUser ? <small>You</small> : null}
                   </div>
                   <div className="leaderboard-row-stats">

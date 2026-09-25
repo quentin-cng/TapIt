@@ -4,6 +4,10 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSafeNextPath } from "@/lib/auth/redirect";
+import {
+  isValidDisplayName,
+  normalizeDisplayName,
+} from "@/lib/profile-identity";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
@@ -11,6 +15,7 @@ export type AuthActionState = {
   message: string;
   values?: {
     email?: string;
+    displayName?: string;
     username?: string;
   };
 };
@@ -98,11 +103,20 @@ export async function signup(
   _previousState: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
+  const displayName = normalizeDisplayName(getText(formData, "display_name"));
   const username = getText(formData, "username").trim().toLowerCase();
   const email = getText(formData, "email").trim().toLowerCase();
   const password = getText(formData, "password");
   const next = getSafeNextPath(getText(formData, "next"));
-  const values = { email, username };
+  const values = { displayName, email, username };
+
+  if (!isValidDisplayName(displayName)) {
+    return {
+      status: "error",
+      message: "Display name must be between 1 and 30 characters.",
+      values,
+    };
+  }
 
   if (!usernamePattern.test(username)) {
     return {
@@ -137,7 +151,7 @@ export async function signup(
     email,
     password,
     options: {
-      data: { username },
+      data: { display_name: displayName, username },
       ...(origin
         ? {
             emailRedirectTo: `${origin}/auth/confirm?next=${encodeURIComponent(next)}`,

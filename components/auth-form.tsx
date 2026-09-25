@@ -49,24 +49,39 @@ export function AuthForm({ mode, initialError, next = "/dashboard" }: AuthFormPr
     <form className="auth-form" action={formAction} noValidate>
       <input name="next" type="hidden" value={next} />
       {mode === "signup" ? (
-        <label>
-          <span>Username</span>
-          <input
-            autoCapitalize="none"
-            autoComplete="username"
-            defaultValue={state.values?.username}
-            inputMode="text"
-            maxLength={30}
-            minLength={3}
-            name="username"
-            pattern="[a-z0-9_]{3,30}"
-            placeholder="martin_moves"
-            required
-            spellCheck={false}
-            type="text"
-          />
-          <small>3–30 lowercase letters, numbers, or underscores.</small>
-        </label>
+        <>
+          <label>
+            <span>Display name</span>
+            <input
+              autoComplete="name"
+              defaultValue={state.values?.displayName}
+              maxLength={30}
+              name="display_name"
+              placeholder="Quentin"
+              required
+              type="text"
+            />
+            <small>The name your friends will see.</small>
+          </label>
+          <label>
+            <span>Username</span>
+            <input
+              autoCapitalize="none"
+              autoComplete="username"
+              defaultValue={state.values?.username}
+              inputMode="text"
+              maxLength={30}
+              minLength={3}
+              name="username"
+              pattern="[a-z0-9_]{3,30}"
+              placeholder="quentincng"
+              required
+              spellCheck={false}
+              type="text"
+            />
+            <small>Unique: 3–30 lowercase letters, numbers, or underscores.</small>
+          </label>
+        </>
       ) : null}
 
       <label>

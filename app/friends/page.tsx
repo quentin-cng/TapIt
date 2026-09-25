@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { FriendAction } from "./friend-action";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, ProgressBar } from "@/components/ui";
+import { resolveDisplayName } from "@/lib/profile-identity";
 import { mapSocialWeeklyStats } from "@/lib/stats/social-weekly";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,12 +12,14 @@ type FriendsPageProps = {
 
 type RelationshipProfile = {
   profile_id: string;
+  display_name: string | null;
   username: string;
   total_points: number;
   created_at: string;
 };
 
 type SearchProfile = {
+  display_name: string | null;
   username: string;
   total_points: number;
   relationship_status: "friends" | "outgoing" | "incoming" | "none";
@@ -146,6 +149,10 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
                   );
 
                   if (!requester) return null;
+                  const displayName = resolveDisplayName(
+                    requester.display_name,
+                    requester.username,
+                  );
 
                   return (
                     <article
@@ -154,10 +161,11 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
                       role="listitem"
                     >
                       <span className="initial-avatar" aria-hidden="true">
-                        {requester.username.charAt(0).toUpperCase()}
+                        {displayName.charAt(0).toUpperCase()}
                       </span>
                       <div className="friend-request-identity">
-                        <strong>@{requester.username}</strong>
+                        <strong>{displayName}</strong>
+                        <span>@{requester.username}</span>
                         <small>{requester.total_points} points</small>
                       </div>
                       <div className="friend-request-actions">
@@ -185,6 +193,10 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
               <div className="friends-table" role="list">
                 {friends.map((friend) => {
                   const weeklyStat = socialStatsById.get(friend.profile_id);
+                  const displayName = resolveDisplayName(
+                    friend.display_name,
+                    friend.username,
+                  );
                   const goal = weeklyStat?.currentGoal;
                   const sessions = weeklyStat?.currentSessions ?? 0;
 
@@ -195,10 +207,11 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
                       role="listitem"
                     >
                       <span className="initial-avatar" aria-hidden="true">
-                        {friend.username.charAt(0).toUpperCase()}
+                        {displayName.charAt(0).toUpperCase()}
                       </span>
                       <div className="friend-identity">
-                        <strong>@{friend.username}</strong>
+                        <strong>{displayName}</strong>
+                        <span>@{friend.username}</span>
                         <small>{friend.total_points} points</small>
                       </div>
                       <div className="friend-progress">
@@ -209,7 +222,7 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
                         </span>
                         {goal ? (
                           <ProgressBar
-                            label={`${friend.username} completed ${sessions} of ${goal} weekly sessions`}
+                            label={`${displayName} completed ${sessions} of ${goal} weekly sessions`}
                             max={goal}
                             value={sessions}
                           />
@@ -278,6 +291,10 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
           ) : searchProfiles.length ? (
             <div className="search-results-list">
               {searchProfiles.map((profile) => {
+                const displayName = resolveDisplayName(
+                  profile.display_name,
+                  profile.username,
+                );
                 const isFriend = profile.relationship_status === "friends";
                 const isOutgoing = profile.relationship_status === "outgoing";
                 const isIncoming = profile.relationship_status === "incoming";
@@ -285,10 +302,11 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
                 return (
                   <article className="search-result-row" key={profile.username}>
                     <span className="initial-avatar" aria-hidden="true">
-                      {profile.username.charAt(0).toUpperCase()}
+                      {displayName.charAt(0).toUpperCase()}
                     </span>
-                    <div>
-                      <strong>@{profile.username}</strong>
+                    <div className="friend-search-identity">
+                      <strong>{displayName}</strong>
+                      <span>@{profile.username}</span>
                       <small>{profile.total_points} points</small>
                     </div>
                     {isFriend ? (

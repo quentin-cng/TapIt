@@ -27,6 +27,7 @@ function stat(
     currentWeeklyGoalStreak: 0,
     bestWeeklyGoalStreak: 0,
     ...remainingOverrides,
+    displayName: remainingOverrides.displayName ?? username,
   };
 }
 
@@ -155,6 +156,7 @@ describe("social weekly recap", () => {
     const recap = buildWeeklyRecap([
       stat({
         userId: "a",
+        displayName: "Mewen",
         username: "missed",
         previousGoalAchieved: false,
       }),
@@ -168,7 +170,7 @@ describe("social weekly recap", () => {
 
     const message = getWeeklyRecapMessage(recap);
 
-    assert.equal(message, "@missed didn't hit their goal last week.");
+    assert.equal(message, "Mewen didn't hit their goal last week.");
     assert.doesNotMatch(message, /no_goal/);
   });
 

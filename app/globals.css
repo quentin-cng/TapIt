@@ -1075,6 +1075,15 @@ button:disabled {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.friend-request-identity > span,
+.friend-search-identity > span,
+.friend-identity > span {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.69rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .friend-request-identity small,
 .search-result-row small {
   color: var(--text-secondary);
@@ -1299,11 +1308,23 @@ button:disabled {
   align-items: center;
   gap: 8px;
 }
-.leaderboard-user > strong {
+.leaderboard-identity {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.leaderboard-identity > strong,
+.leaderboard-identity > span {
   overflow: hidden;
-  font-size: 0.8rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.leaderboard-identity > strong {
+  font-size: 0.8rem;
+}
+.leaderboard-identity > span {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
 }
 .leaderboard-user > small {
   border-radius: 999px;
@@ -1525,6 +1546,13 @@ button:disabled {
   padding: 2px 5px;
   font-size: 0.48rem;
   text-transform: uppercase;
+}
+.recap-username {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .recap-person > div > span {
   color: var(--text-secondary);

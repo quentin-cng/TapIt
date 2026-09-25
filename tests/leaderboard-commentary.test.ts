@@ -7,51 +7,51 @@ import {
 } from "../lib/stats/leaderboard-commentary";
 
 function entry(
-  username: string,
+  displayName: string,
   totalPoints: number,
   isCurrentUser = false,
 ): LeaderboardCommentaryEntry {
-  return { username, totalPoints, isCurrentUser };
+  return { displayName, totalPoints, isCurrentUser };
 }
 
 describe("leaderboard mascot commentary", () => {
   it("uses the highest and lowest ranked friends while excluding the current user", () => {
     const message = getFriendsLeaderboardCommentary([
-      entry("current_user", 100, true),
-      entry("alex", 80),
-      entry("sam", 30),
+      entry("Current User", 100, true),
+      entry("Alex", 80),
+      entry("Sam", 30),
     ]);
 
     assert.equal(
       message,
-      "@alex is leading your crew, @sam, you're up next.",
+      "Alex is leading your crew, Sam, you're up next.",
     );
-    assert.doesNotMatch(message, /current_user/);
+    assert.doesNotMatch(message, /Current User/);
   });
 
   it("congratulates a sole friend without identifying a bottom friend", () => {
     assert.equal(
       getFriendsLeaderboardCommentary([
-        entry("current_user", 100, true),
-        entry("alex", 80),
+        entry("Current User", 100, true),
+        entry("Alex", 80),
       ]),
-      "@alex is your highest-ranked friend with 80 points!",
+      "Alex is your highest-ranked friend with 80 points!",
     );
   });
 
   it("handles an all-points tie without suggesting anyone is behind", () => {
     assert.equal(
       getFriendsLeaderboardCommentary([
-        entry("alex", 40),
-        entry("sam", 40),
+        entry("Alex", 40),
+        entry("Sam", 40),
       ]),
-      "@alex and @sam are tied at 40 points, keep it going!",
+      "Alex and Sam are tied at 40 points, keep it going!",
     );
   });
 
   it("shows neutral encouragement with no friends", () => {
     assert.equal(
-      getFriendsLeaderboardCommentary([entry("current_user", 100, true)]),
+      getFriendsLeaderboardCommentary([entry("Current User", 100, true)]),
       "Add friends to see who takes the lead.",
     );
   });
@@ -62,8 +62,8 @@ describe("leaderboard mascot commentary", () => {
       "Anonymous is leading TapIt with 320 points!",
     );
     assert.equal(
-      getGeneralLeaderboardCommentary([entry("alex", 320)]),
-      "@alex is leading TapIt with 320 points!",
+      getGeneralLeaderboardCommentary([entry("Alex", 320)]),
+      "Alex is leading TapIt with 320 points!",
     );
   });
 

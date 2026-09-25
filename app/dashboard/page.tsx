@@ -10,8 +10,10 @@ import {
   type WeeklyGoalSchedule,
 } from "@/lib/stats/weekly-goals";
 import { createClient } from "@/lib/supabase/server";
+import { resolveDisplayName } from "@/lib/profile-identity";
 
 type MyProfile = {
+  display_name: string | null;
   username: string;
   total_points: number;
 };
@@ -115,7 +117,7 @@ export default async function DashboardPage() {
         <>
           <header className="dashboard-greeting">
             <p>{getMontrealGreeting()},</p>
-            <h1>{profile.username}</h1>
+            <h1>{resolveDisplayName(profile.display_name, profile.username)}</h1>
           </header>
 
           {hasDataError ? (
