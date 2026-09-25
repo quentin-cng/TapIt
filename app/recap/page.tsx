@@ -25,16 +25,18 @@ function formatWeekRange(weekStart: string) {
 }
 
 function RecapRows({
+  emptyMessage,
   stats,
   status,
   userId,
 }: {
+  emptyMessage: string;
   stats: SocialWeeklyStat[];
   status: "hit" | "missed";
   userId: string;
 }) {
   if (stats.length === 0) {
-    return <p className="recap-empty">No one in this group.</p>;
+    return <p className="recap-empty">{emptyMessage}</p>;
   }
 
   return (
@@ -47,19 +49,19 @@ function RecapRows({
           <span className="recap-status-mark" aria-hidden="true">
             {status === "hit" ? "✓" : "●"}
           </span>
-          <div>
+          <div className="recap-person-identity">
             <strong>
               {stat.displayName}
               {stat.userId === userId ? <small>You</small> : null}
             </strong>
             <small className="recap-username">@{stat.username}</small>
-            <span>
-              {stat.previousSessions} / {stat.previousGoal} sessions
-            </span>
           </div>
-          <strong className="recap-row-points">
-            +{stat.previousWeekPoints} pts
-          </strong>
+          <div className="recap-row-progress">
+            <strong>
+              {stat.previousSessions} / {stat.previousGoal}
+            </strong>
+            <small>sessions</small>
+          </div>
         </article>
       ))}
     </div>
@@ -86,7 +88,6 @@ export default async function RecapPage() {
 
   const recap = buildWeeklyRecap(stats);
   const previousWeek = stats[0]?.previousWeekStart;
-  const pointsValue = recap.mostPoints[0]?.previousWeekPoints ?? 0;
   const streakValue = recap.bestStreak[0]?.bestWeeklyGoalStreak ?? 0;
   const hasGoalResults =
     recap.goalsHit.length > 0 || recap.goalsMissed.length > 0;
@@ -110,17 +111,6 @@ export default async function RecapPage() {
         </p>
       ) : (
         <>
-          <TapItMascotSpeech
-            className="recap-commentary"
-            detail={
-              hasGoalResults
-                ? `${recap.achievedCount} / ${recap.eligibleCount} goals hit`
-                : undefined
-            }
-          >
-            {getWeeklyRecapMessage(recap)}
-          </TapItMascotSpeech>
-
           {hasGoalResults ? (
             <>
               <section className="recap-section hit">
@@ -129,8 +119,16 @@ export default async function RecapPage() {
                     <p className="section-label">Goals hit</p>
                     <h2>Commitments completed</h2>
                   </div>
+                  <span className="recap-group-count">
+                    {recap.goalsHit.length}
+                  </span>
                 </div>
-                <RecapRows stats={recap.goalsHit} status="hit" userId={userId} />
+                <RecapRows
+                  emptyMessage="No completed goals this week."
+                  stats={recap.goalsHit}
+                  status="hit"
+                  userId={userId}
+                />
               </section>
 
               <section className="recap-section missed">
@@ -139,8 +137,12 @@ export default async function RecapPage() {
                     <p className="section-label">Missed</p>
                     <h2>Goals not reached</h2>
                   </div>
+                  <span className="recap-group-count">
+                    {recap.goalsMissed.length}
+                  </span>
                 </div>
                 <RecapRows
+                  emptyMessage="Everyone with a goal made it."
                   stats={recap.goalsMissed}
                   status="missed"
                   userId={userId}
@@ -149,36 +151,37 @@ export default async function RecapPage() {
             </>
           ) : null}
 
-          <section className="recap-highlights" aria-label="Weekly highlights">
-            <article>
-              <span>Most points</span>
-              <strong>
-                {recap.mostPoints.length
-                  ? recap.mostPoints
-                      .map((stat) => stat.displayName)
-                      .join(", ")
-                  : "No result"}
-              </strong>
-              <small>
-                {recap.mostPoints.length ? `+${pointsValue} pts` : "—"}
-              </small>
-            </article>
-            <article>
-              <span>Best weekly streak</span>
-              <strong>
-                {recap.bestStreak.length
-                  ? recap.bestStreak
-                      .map((stat) => stat.displayName)
-                      .join(", ")
-                  : "No result"}
-              </strong>
-              <small>
-                {recap.bestStreak.length
-                  ? `${streakValue} ${streakValue === 1 ? "week" : "weeks"}`
-                  : "—"}
-              </small>
-            </article>
-          </section>
+          <TapItMascotSpeech className="recap-commentary">
+            {getWeeklyRecapMessage(recap)}
+          </TapItMascotSpeech>
+
+          {streakValue > 0 ? (
+            <section
+              className="recap-streak-highlight"
+              aria-labelledby="best-weekly-streak-title"
+            >
+              <div className="recap-streak-heading">
+                <span aria-hidden="true">🔥</span>
+                <div>
+                  <p className="section-label">Consistency highlight</p>
+                  <h2 id="best-weekly-streak-title">Best weekly streak</h2>
+                </div>
+              </div>
+              <div className="recap-streak-leaders">
+                {recap.bestStreak.map((stat) => (
+                  <article key={stat.userId}>
+                    <div>
+                      <strong>{stat.displayName}</strong>
+                      <small>@{stat.username}</small>
+                    </div>
+                    <b>
+                      {streakValue} {streakValue === 1 ? "week" : "weeks"}
+                    </b>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
         </>
       )}

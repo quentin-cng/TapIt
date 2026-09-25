@@ -57,7 +57,7 @@ export function AuthForm({ mode, initialError, next = "/dashboard" }: AuthFormPr
               defaultValue={state.values?.displayName}
               maxLength={30}
               name="display_name"
-              placeholder="Quentin"
+              placeholder="Your name"
               required
               type="text"
             />
@@ -74,7 +74,7 @@ export function AuthForm({ mode, initialError, next = "/dashboard" }: AuthFormPr
               minLength={3}
               name="username"
               pattern="[a-z0-9_]{3,30}"
-              placeholder="quentincng"
+              placeholder="username"
               required
               spellCheck={false}
               type="text"
@@ -92,7 +92,7 @@ export function AuthForm({ mode, initialError, next = "/dashboard" }: AuthFormPr
           defaultValue={state.values?.email}
           inputMode="email"
           name="email"
-          placeholder="you@mcgill.ca"
+          placeholder="example@email.com"
           required
           spellCheck={false}
           type="email"

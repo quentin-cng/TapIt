@@ -138,17 +138,21 @@ export function getWeeklyRecapMessage(recap: WeeklyRecap) {
 
   if (missedNames.length === 0) {
     return recap.eligibleCount > 0
-      ? "Everyone with a goal hit it last week."
-      : "No completed goals were available to recap last week.";
+      ? "Everyone hit their goal last week. That's how it's done!"
+      : "No weekly goals to recap yet.";
   }
 
   if (missedNames.length === 1) {
-    return `${missedNames[0]} didn't hit their goal last week.`;
+    return `${missedNames[0]} missed their goal last week, let's get them back on track!`;
   }
 
   if (missedNames.length === 2) {
-    return `${missedNames[0]} and ${missedNames[1]} didn't hit their goals last week.`;
+    return `${missedNames[0]} and ${missedNames[1]} missed their goals last week, let's get them back on track!`;
   }
 
-  return `${missedNames[0]}, ${missedNames[1]}, and ${missedNames.length - 2} others didn't hit their goals last week.`;
+  if (missedNames.length === 3) {
+    return `${missedNames[0]}, ${missedNames[1]}, and ${missedNames[2]} missed their goals last week, let's get them back on track!`;
+  }
+
+  return `${missedNames[0]}, ${missedNames[1]}, and ${missedNames.length - 2} others missed their goals last week, let's get them back on track!`;
 }

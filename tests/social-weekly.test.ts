@@ -170,8 +170,54 @@ describe("social weekly recap", () => {
 
     const message = getWeeklyRecapMessage(recap);
 
-    assert.equal(message, "Mewen didn't hit their goal last week.");
+    assert.equal(
+      message,
+      "Mewen missed their goal last week, let's get them back on track!",
+    );
     assert.doesNotMatch(message, /no_goal/);
+  });
+
+  it("uses display names for multiple missed goals", () => {
+    const recap = buildWeeklyRecap([
+      stat({
+        userId: "a",
+        displayName: "Aaron",
+        username: "aaron_lifts",
+        previousGoalAchieved: false,
+      }),
+      stat({
+        userId: "b",
+        displayName: "Mewen",
+        username: "mewen_tapsit",
+        previousGoalAchieved: false,
+      }),
+    ]);
+
+    assert.equal(
+      getWeeklyRecapMessage(recap),
+      "Aaron and Mewen missed their goals last week, let's get them back on track!",
+    );
+  });
+
+  it("lists three missed names and compacts longer groups", () => {
+    const missed = ["Aaron", "Mewen", "Antoine", "Quentin", "Sam"].map(
+      (displayName, index) =>
+        stat({
+          userId: String(index),
+          displayName,
+          username: `user_${index}`,
+          previousGoalAchieved: false,
+        }),
+    );
+
+    assert.equal(
+      getWeeklyRecapMessage(buildWeeklyRecap(missed.slice(0, 3))),
+      "Aaron, Mewen, and Antoine missed their goals last week, let's get them back on track!",
+    );
+    assert.equal(
+      getWeeklyRecapMessage(buildWeeklyRecap(missed)),
+      "Aaron, Mewen, and 3 others missed their goals last week, let's get them back on track!",
+    );
   });
 
   it("uses a positive recap when everyone with a goal succeeded", () => {
@@ -191,7 +237,23 @@ describe("social weekly recap", () => {
 
     assert.equal(
       getWeeklyRecapMessage(recap),
-      "Everyone with a goal hit it last week.",
+      "Everyone hit their goal last week. That's how it's done!",
     );
+  });
+
+  it("uses one concise empty state when nobody had a previous-week goal", () => {
+    const recap = buildWeeklyRecap([
+      stat({
+        userId: "a",
+        displayName: "Quentin",
+        username: "quentincng",
+        previousGoal: null,
+        previousGoalAchieved: null,
+      }),
+    ]);
+
+    assert.equal(getWeeklyRecapMessage(recap), "No weekly goals to recap yet.");
+    assert.equal(recap.goalsHit.length, 0);
+    assert.equal(recap.goalsMissed.length, 0);
   });
 });

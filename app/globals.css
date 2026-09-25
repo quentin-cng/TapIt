@@ -208,7 +208,6 @@ button {
 .leaderboard-card,
 .profile-card,
 .weekly-goal-card,
-.recap-highlights article,
 .recap-section,
 .error-card {
   border-top: 1px solid var(--border);
@@ -1441,41 +1440,7 @@ button:disabled {
 }
 /* Recap */
 .recap-commentary {
-  margin-bottom: 2px;
-}
-.recap-highlights {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.recap-highlights article {
-  display: grid;
-  min-width: 0;
-  align-content: start;
-  gap: 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  padding: clamp(20px, 4vw, 30px);
-}
-.recap-highlights span {
-  color: var(--text-secondary);
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.recap-highlights strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font-size: clamp(1.15rem, 3.5vw, 1.75rem);
-  letter-spacing: -0.04em;
-  line-height: 1.1;
-}
-.recap-highlights small {
-  color: var(--purple);
-  font-size: 0.82rem;
-  font-weight: 700;
+  margin-block: 2px;
 }
 .recap-section {
   min-width: 0;
@@ -1493,6 +1458,25 @@ button:disabled {
 }
 .recap-section .section-heading h2 {
   font-size: clamp(1.15rem, 3vw, 1.45rem);
+}
+.recap-group-count {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 72%);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.recap-section.hit .recap-group-count {
+  color: var(--success);
+  box-shadow: inset 0 0 0 1px #bddfc9;
+}
+.recap-section.missed .recap-group-count {
+  color: var(--danger);
+  box-shadow: inset 0 0 0 1px #edc8ce;
 }
 .recap-people {
   margin-top: 16px;
@@ -1527,18 +1511,18 @@ button:disabled {
   background: #f9e9ec;
   color: var(--danger);
 }
-.recap-person > div {
+.recap-person-identity {
   display: grid;
   min-width: 0;
   gap: 4px;
 }
-.recap-person > div > strong {
+.recap-person-identity > strong {
   overflow: hidden;
   font-size: 0.76rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.recap-person > div > strong small {
+.recap-person-identity > strong small {
   margin-left: 6px;
   border-radius: 999px;
   background: var(--purple);
@@ -1554,12 +1538,82 @@ button:disabled {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.recap-person > div > span {
-  color: var(--text-secondary);
-  font-size: 0.73rem;
+.recap-row-progress {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.recap-row-points {
-  font-size: 0.75rem;
+.recap-row-progress strong {
+  font-size: 0.82rem;
+}
+.recap-row-progress small {
+  color: var(--text-secondary);
+  font-size: 0.62rem;
+  font-weight: 550;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.recap-streak-highlight {
+  min-width: 0;
+  border: 1px solid #dcd3f3;
+  border-radius: var(--radius-lg);
+  background: #faf8ff;
+  padding: clamp(20px, 4vw, 28px);
+}
+.recap-streak-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #e5dff3;
+  padding-bottom: 16px;
+}
+.recap-streak-heading > span {
+  font-size: 1.35rem;
+}
+.recap-streak-heading h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.1rem, 3vw, 1.35rem);
+  letter-spacing: -0.035em;
+}
+.recap-streak-leaders {
+  display: grid;
+}
+.recap-streak-leaders article {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #ebe7f4;
+  padding: 15px 0;
+}
+.recap-streak-leaders article:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.recap-streak-leaders article > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.recap-streak-leaders strong,
+.recap-streak-leaders small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recap-streak-leaders strong {
+  font-size: 0.84rem;
+}
+.recap-streak-leaders small {
+  color: var(--text-secondary);
+  font-size: 0.69rem;
+}
+.recap-streak-leaders b {
+  color: var(--purple-dark);
+  font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1772,9 +1826,6 @@ button:disabled {
   .leaderboard-commentary {
     margin-bottom: 12px;
   }
-  .recap-highlights {
-    grid-template-columns: 1fr;
-  }
 }
 @media (max-width: 430px) {
   .mobile-nav a {
@@ -1930,7 +1981,7 @@ button:disabled {
   .recap-commentary {
     grid-column: 1/-1;
   }
-  .recap-highlights {
+  .recap-streak-highlight {
     grid-column: 1/-1;
   }
   .recap-section.hit {
