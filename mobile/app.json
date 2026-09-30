@@ -4,6 +4,14 @@
     "slug": "tapit-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic"
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow TapIt to use your location to verify check-ins at participating fitness locations."
+        }
+      ]
+    ]
   }
 }

@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { CheckinScreen } from "./src/checkin/CheckinScreen";
 import { supabase } from "./src/lib/supabase";
 
 type MyProfile = {
@@ -29,6 +30,8 @@ export default function App() {
   const [profileError, setProfileError] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [showDevelopmentCheckin, setShowDevelopmentCheckin] = useState(false);
+  const [profileRefreshKey, setProfileRefreshKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -61,6 +64,7 @@ export default function App() {
     let isCurrent = true;
 
     if (!session) {
+      setShowDevelopmentCheckin(false);
       setProfile(null);
       setProfileError("");
       setIsLoadingProfile(false);
@@ -91,7 +95,7 @@ export default function App() {
     return () => {
       isCurrent = false;
     };
-  }, [session]);
+  }, [profileRefreshKey, session]);
 
   async function signIn() {
     setAuthError("");
@@ -195,6 +199,17 @@ export default function App() {
     );
   }
 
+  if (__DEV__ && showDevelopmentCheckin) {
+    return (
+      <CheckinScreen
+        onBack={() => setShowDevelopmentCheckin(false)}
+        onSuccessfulCheckin={() => {
+          setProfileRefreshKey((current) => current + 1);
+        }}
+      />
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <StatusBar style="auto" />
@@ -221,6 +236,19 @@ export default function App() {
         )}
 
         {authError ? <Text style={styles.error}>{authError}</Text> : null}
+
+        {__DEV__ ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setShowDevelopmentCheckin(true)}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && styles.pressedButton,
+            ]}
+          >
+            <Text style={styles.primaryButtonText}>Test check-in</Text>
+          </Pressable>
+        ) : null}
 
         <Pressable
           accessibilityRole="button"
