@@ -1,10 +1,3 @@
-import { PlaceholderScreen } from "../../../components/PlaceholderScreen";
+import { FriendsScreen } from "../../../features/friends/FriendsScreen";
 
-export default function FriendsScreen() {
-  return (
-    <PlaceholderScreen
-      description="The native Friends experience will be added in a later milestone."
-      title="Friends"
-    />
-  );
-}
+export default FriendsScreen;

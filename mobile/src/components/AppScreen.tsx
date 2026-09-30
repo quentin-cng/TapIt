@@ -19,6 +19,7 @@ export function AppScreen({ children, refreshControl }: AppScreenProps) {
       </View>
       <ScrollView
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
       >
