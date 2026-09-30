@@ -1,10 +1,3 @@
-import { PlaceholderScreen } from "../../../components/PlaceholderScreen";
+import { LeaderboardScreen } from "../../../features/leaderboard/LeaderboardScreen";
 
-export default function LeaderboardScreen() {
-  return (
-    <PlaceholderScreen
-      description="The native Leaderboard experience will be added in a later milestone."
-      title="Leaderboard"
-    />
-  );
-}
+export default LeaderboardScreen;
