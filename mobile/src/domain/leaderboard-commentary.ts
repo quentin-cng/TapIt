@@ -1,5 +1,5 @@
 // Source: /lib/stats/leaderboard-commentary.ts in the existing TapIt web app.
-// This mobile-local copy preserves the production commentary behavior exactly.
+// Native adds second-person wording when the authenticated user ranks first.
 export type LeaderboardCommentaryEntry = {
   displayName: string;
   totalPoints: number;
@@ -9,6 +9,10 @@ export type LeaderboardCommentaryEntry = {
 export function getFriendsLeaderboardCommentary(
   rankedEntries: readonly LeaderboardCommentaryEntry[],
 ) {
+  if (rankedEntries[0]?.isCurrentUser) {
+    return "You are leading your crew.";
+  }
+
   const friends = rankedEntries.filter((entry) => !entry.isCurrentUser);
 
   if (friends.length === 0) {
@@ -41,6 +45,10 @@ export function getGeneralLeaderboardCommentary(
 
   if (!leader) {
     return "The first TapIt points will set the pace.";
+  }
+
+  if (leader.isCurrentUser) {
+    return `You are leading TapIt with ${leader.totalPoints} points!`;
   }
 
   return `${leader.displayName} is leading TapIt with ${leader.totalPoints} points!`;

@@ -1,5 +1,5 @@
 // Source: /lib/stats/social-weekly.ts in the existing TapIt web app.
-// Only the Friends-required RPC mapping is copied; its behavior is unchanged.
+// Only the social RPC mapping and pure recap logic are copied unchanged.
 import { resolveDisplayName } from "./profile-identity";
 
 export type SocialWeeklyStat = {
@@ -36,6 +36,16 @@ type SocialWeeklyRpcRow = {
   previous_week_points: number;
   current_weekly_goal_streak: number;
   best_weekly_goal_streak: number;
+};
+
+export type WeeklyRecap = {
+  goalsHit: SocialWeeklyStat[];
+  goalsMissed: SocialWeeklyStat[];
+  noGoal: SocialWeeklyStat[];
+  eligibleCount: number;
+  achievedCount: number;
+  mostPoints: SocialWeeklyStat[];
+  bestStreak: SocialWeeklyStat[];
 };
 
 function isRpcRow(value: unknown): value is SocialWeeklyRpcRow {
@@ -81,4 +91,70 @@ export function mapSocialWeeklyStats(data: unknown): SocialWeeklyStat[] {
     currentWeeklyGoalStreak: row.current_weekly_goal_streak,
     bestWeeklyGoalStreak: row.best_weekly_goal_streak,
   }));
+}
+
+function byUsername(a: SocialWeeklyStat, b: SocialWeeklyStat) {
+  return a.username.localeCompare(b.username);
+}
+
+function tiedLeaders(
+  stats: readonly SocialWeeklyStat[],
+  selectValue: (stat: SocialWeeklyStat) => number,
+) {
+  if (stats.length === 0) {
+    return [];
+  }
+
+  const highestValue = Math.max(...stats.map(selectValue));
+  return stats
+    .filter((stat) => selectValue(stat) === highestValue)
+    .sort(byUsername);
+}
+
+export function buildWeeklyRecap(
+  stats: readonly SocialWeeklyStat[],
+): WeeklyRecap {
+  const goalsHit = stats
+    .filter((stat) => stat.previousGoalAchieved === true)
+    .sort(byUsername);
+  const goalsMissed = stats
+    .filter((stat) => stat.previousGoalAchieved === false)
+    .sort(byUsername);
+  const noGoal = stats
+    .filter((stat) => stat.previousGoalAchieved === null)
+    .sort(byUsername);
+
+  return {
+    goalsHit,
+    goalsMissed,
+    noGoal,
+    eligibleCount: goalsHit.length + goalsMissed.length,
+    achievedCount: goalsHit.length,
+    mostPoints: tiedLeaders(stats, (stat) => stat.previousWeekPoints),
+    bestStreak: tiedLeaders(stats, (stat) => stat.bestWeeklyGoalStreak),
+  };
+}
+
+export function getWeeklyRecapMessage(recap: WeeklyRecap) {
+  const missedNames = recap.goalsMissed.map((stat) => stat.displayName);
+
+  if (missedNames.length === 0) {
+    return recap.eligibleCount > 0
+      ? "Everyone hit their goal last week. That's how it's done!"
+      : "No weekly goals to recap yet.";
+  }
+
+  if (missedNames.length === 1) {
+    return `${missedNames[0]} missed their goal last week, let's get them back on track!`;
+  }
+
+  if (missedNames.length === 2) {
+    return `${missedNames[0]} and ${missedNames[1]} missed their goals last week, let's get them back on track!`;
+  }
+
+  if (missedNames.length === 3) {
+    return `${missedNames[0]}, ${missedNames[1]}, and ${missedNames[2]} missed their goals last week, let's get them back on track!`;
+  }
+
+  return `${missedNames[0]}, ${missedNames[1]}, and ${missedNames.length - 2} others missed their goals last week, let's get them back on track!`;
 }

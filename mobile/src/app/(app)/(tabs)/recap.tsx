@@ -1,10 +1,3 @@
-import { PlaceholderScreen } from "../../../components/PlaceholderScreen";
+import { WeeklyRecapScreen } from "../../../features/recap/WeeklyRecapScreen";
 
-export default function RecapScreen() {
-  return (
-    <PlaceholderScreen
-      description="The native weekly Recap experience will be added in a later milestone."
-      title="Recap"
-    />
-  );
-}
+export default WeeklyRecapScreen;
