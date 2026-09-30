@@ -11,7 +11,9 @@
         {
           "locationWhenInUsePermission": "Allow TapIt to use your location to verify check-ins at participating fitness locations."
         }
-      ]
+      ],
+      "expo-router",
+      "expo-font"
     ]
   }
 }
