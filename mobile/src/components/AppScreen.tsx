@@ -7,15 +7,23 @@ import { colors, fonts } from "../theme/tokens";
 type AppScreenProps = {
   children: ReactNode;
   refreshControl?: React.ReactElement<RefreshControlProps>;
+  topbarAccessory?: ReactNode;
 };
 
-export function AppScreen({ children, refreshControl }: AppScreenProps) {
+export function AppScreen({
+  children,
+  refreshControl,
+  topbarAccessory,
+}: AppScreenProps) {
   return (
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <View style={styles.topbar}>
         <Text accessibilityRole="header" style={styles.wordmark}>
           Tap<Text style={styles.wordmarkAccent}>It</Text>
         </Text>
+        {topbarAccessory ? (
+          <View style={styles.topbarAccessory}>{topbarAccessory}</View>
+        ) : null}
       </View>
       <ScrollView
         contentContainerStyle={styles.content}
@@ -36,10 +44,15 @@ const styles = StyleSheet.create({
   },
   topbar: {
     minHeight: 68,
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     marginHorizontal: 16,
+  },
+  topbarAccessory: {
+    marginLeft: 16,
   },
   wordmark: {
     color: colors.textPrimary,

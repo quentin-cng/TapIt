@@ -17,8 +17,6 @@ type MyProfile = {
 };
 
 type CheckinRow = {
-  location_id: string;
-  points_awarded: number;
   created_at: string;
 };
 
@@ -27,19 +25,9 @@ type ScheduleRow = {
   goal_sessions: number;
 };
 
-type CheckinLocation = {
-  location_id: string;
-  location_name: string;
-};
-
-export type RecentActivity = CheckinRow & {
-  locationName: string;
-};
-
 export type HomeData = {
-  hasDataError: boolean;
+  hasPersonalDataError: boolean;
   profile: MyProfile;
-  recentActivity: RecentActivity[];
   weeklyProgress: WeeklyProgress | null;
   weeklyStreaks: WeeklyGoalStreaks;
 };
@@ -68,7 +56,7 @@ export function useHomeData(userId: string) {
         supabase.rpc("get_my_profile").single(),
         supabase
           .from("checkins")
-          .select("location_id, points_awarded, created_at")
+          .select("created_at")
           .eq("user_id", userId)
           .gt("points_awarded", 0)
           .order("created_at", { ascending: false }),
@@ -96,28 +84,13 @@ export function useHomeData(userId: string) {
         getMontrealWeekStart(),
       );
       const checkinTimestamps = checkins.map((checkin) => checkin.created_at);
-      const recentCheckins = checkins.slice(0, 5);
-      const locationsResult = recentCheckins.length
-        ? await supabase.rpc("get_my_checkin_locations")
-        : { data: [], error: null };
-      const locationNames = new Map<string, string>(
-        ((locationsResult.data ?? []) as CheckinLocation[]).map((location) => [
-          location.location_id,
-          location.location_name,
-        ]),
-      );
-
       if (currentRequest !== requestId.current) return;
 
       setData({
-        hasDataError: Boolean(
-          checkinsResult.error || schedulesResult.error || locationsResult.error,
+        hasPersonalDataError: Boolean(
+          checkinsResult.error || schedulesResult.error,
         ),
         profile,
-        recentActivity: recentCheckins.map((checkin) => ({
-          ...checkin,
-          locationName: locationNames.get(checkin.location_id) ?? "TapIt location",
-        })),
         weeklyProgress: currentWeeklyGoal
           ? calculateWeeklyProgress(checkinTimestamps, currentWeeklyGoal)
           : null,
