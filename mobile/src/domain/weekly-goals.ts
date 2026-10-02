@@ -128,3 +128,7 @@ export function calculateWeeklyGoalStreaks(
 export function formatWeekCount(weeks: number) {
   return `${weeks} ${weeks === 1 ? "week" : "weeks"}`;
 }
+
+export function formatSessionCount(sessions: number) {
+  return `${sessions} ${sessions === 1 ? "session" : "sessions"}`;
+}

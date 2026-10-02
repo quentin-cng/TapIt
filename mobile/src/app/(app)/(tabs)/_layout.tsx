@@ -60,15 +60,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons color={color} name="account-outline" size={size} />
-          ),
-        }}
-      />
     </Tabs>
   );
 }
