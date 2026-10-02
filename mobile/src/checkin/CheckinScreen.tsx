@@ -1,7 +1,10 @@
-import * as Location from "expo-location";
-import { useRef, useState } from "react";
+import * as Haptics from "expo-haptics";
+import { StatusBar } from "expo-status-bar";
+import { useState } from "react";
 import {
-  ActivityIndicator,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,571 +12,697 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { supabase } from "../lib/supabase";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useSession } from "../auth/SessionProvider";
+import { fonts } from "../theme/tokens";
+import { getResultCopy, type CheckinRow } from "./checkin-contract";
+import { CheckinSuccessView } from "./CheckinSuccessView";
+import { useCheckinFlow } from "./useCheckinFlow";
+import { VerificationPulse } from "./VerificationPulse";
 
-type CheckinContextRow = {
-  status: "valid" | "invalid_tag";
-  location_name: string | null;
-  requires_location_verification: boolean;
-};
-
-type CheckinStatus =
-  | "success"
-  | "cooldown"
-  | "invalid_tag"
-  | "location_required"
-  | "invalid_location"
-  | "location_too_inaccurate"
-  | "outside_geofence";
-
-type CheckinRow = {
-  status: CheckinStatus;
-  checkin_id: string | null;
-  location_id: string | null;
-  location_name: string | null;
-  points_awarded: number;
-  total_points: number | null;
-  checked_in_at: string | null;
-  next_eligible_at: string | null;
-  weekly_goal: number | null;
-  weekly_sessions: number | null;
-  weekly_bonus_points: number;
-  weekly_goal_completed: boolean;
-  total_points_earned: number;
-};
-
-type CheckinScreenProps = {
+type SharedCheckinScreenProps = {
   onBack: () => void;
-  onSuccessfulCheckin: () => void;
+  onDone: () => void;
 };
 
-const checkinStatuses = new Set<CheckinStatus>([
-  "success",
-  "cooldown",
-  "invalid_tag",
-  "location_required",
-  "invalid_location",
-  "location_too_inaccurate",
-  "outside_geofence",
-]);
+type CheckinScreenProps = SharedCheckinScreenProps &
+  (
+    | { mode: "development" }
+    | {
+        mode: "route";
+        token: string;
+      }
+  );
 
-function firstRow(data: unknown) {
-  return Array.isArray(data) ? data[0] : data;
-}
+type CheckinPreview = {
+  result: CheckinRow;
+  streak: number | null;
+};
 
-function isCheckinContextRow(value: unknown): value is CheckinContextRow {
-  if (!value || typeof value !== "object") return false;
+const successPreview: CheckinPreview = {
+  result: {
+    status: "success",
+    checkin_id: "development-preview-success",
+    location_id: "development-preview-location",
+    location_name: "McGill Fitness Centre",
+    points_awarded: 10,
+    total_points: 65,
+    checked_in_at: "2026-10-01T12:00:00.000Z",
+    next_eligible_at: "2026-10-01T16:00:00.000Z",
+    weekly_goal: 4,
+    weekly_sessions: 2,
+    weekly_bonus_points: 0,
+    weekly_goal_completed: false,
+    total_points_earned: 10,
+  },
+  streak: 1,
+};
 
-  const row = value as Record<string, unknown>;
+const weeklyBonusPreview: CheckinPreview = {
+  result: {
+    status: "success",
+    checkin_id: "development-preview-weekly-bonus",
+    location_id: "development-preview-location",
+    location_name: "McGill Fitness Centre",
+    points_awarded: 10,
+    total_points: 85,
+    checked_in_at: "2026-10-01T12:00:00.000Z",
+    next_eligible_at: "2026-10-01T16:00:00.000Z",
+    weekly_goal: 4,
+    weekly_sessions: 4,
+    weekly_bonus_points: 20,
+    weekly_goal_completed: true,
+    total_points_earned: 30,
+  },
+  streak: 2,
+};
+
+const cooldownPreview: CheckinPreview = {
+  result: {
+    status: "cooldown",
+    checkin_id: null,
+    location_id: "development-preview-location",
+    location_name: "McGill Fitness Centre",
+    points_awarded: 0,
+    total_points: 65,
+    checked_in_at: null,
+    next_eligible_at: "2026-10-01T16:00:00.000Z",
+    weekly_goal: 4,
+    weekly_sessions: 2,
+    weekly_bonus_points: 0,
+    weekly_goal_completed: false,
+    total_points_earned: 0,
+  },
+  streak: null,
+};
+
+function TapItHeader({ onBack }: { onBack: () => void }) {
   return (
-    (row.status === "valid" || row.status === "invalid_tag") &&
-    (typeof row.location_name === "string" || row.location_name === null) &&
-    typeof row.requires_location_verification === "boolean"
+    <View style={styles.header}>
+      <Text style={styles.wordmark}>
+        Tap<Text style={styles.wordmarkAccent}>It</Text>
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        hitSlop={10}
+        onPress={onBack}
+        style={({ pressed }) => pressed && styles.pressed}
+      >
+        <Text style={styles.backText}>Back</Text>
+      </Pressable>
+    </View>
   );
 }
 
-function isCheckinRow(value: unknown): value is CheckinRow {
-  if (!value || typeof value !== "object") return false;
+export function CheckinScreen(props: CheckinScreenProps) {
+  const { onBack, onDone } = props;
+  const { session } = useSession();
+  const isDevelopmentMode = props.mode === "development";
+  const flow = useCheckinFlow(session!.user.id, {
+    fixedToken: props.mode === "route" ? props.token : undefined,
+  });
+  const [preview, setPreview] = useState<CheckinPreview | null>(null);
 
-  const status = (value as Record<string, unknown>).status;
-  return typeof status === "string" && checkinStatuses.has(status as CheckinStatus);
-}
+  if (isDevelopmentMode && !__DEV__) return null;
 
-function formatTimestamp(value: string | null) {
-  if (!value) return "the time shown by the venue";
+  const isVerifying = flow.isResolving || flow.isSubmitting;
+  const verificationMessage = flow.isResolving
+    ? "Checking your tap…"
+    : flow.verificationMessage || "Checking your tap…";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function resultCopy(result: CheckinRow) {
-  switch (result.status) {
-    case "cooldown":
-      return {
-        title: "Check-in not available yet",
-        message: `The backend reports that this account is in cooldown. Next eligible: ${formatTimestamp(result.next_eligible_at)}.`,
-      };
-    case "invalid_tag":
-      return {
-        title: "Invalid or disabled token",
-        message: "The backend no longer recognizes this TapIt token as active.",
-      };
-    case "location_required":
-      return {
-        title: "Location is required",
-        message: "The backend requires a usable location for this fitness location.",
-      };
-    case "invalid_location":
-      return {
-        title: "Location could not be validated",
-        message: "The backend rejected the location values supplied by the device.",
-      };
-    case "location_too_inaccurate":
-      return {
-        title: "Location is not accurate enough",
-        message: "The backend could not verify this check-in with the current GPS fix.",
-      };
-    case "outside_geofence":
-      return {
-        title: "Not at the selected location",
-        message: "The backend reports that the device is outside this location’s permitted check-in area.",
-      };
-    case "success":
-      return {
-        title: "Check-in successful",
-        message: "The production backend accepted and rewarded this check-in.",
-      };
-  }
-}
-
-export function CheckinScreen({
-  onBack,
-  onSuccessfulCheckin,
-}: CheckinScreenProps) {
-  const [tokenInput, setTokenInput] = useState("");
-  const [selectedToken, setSelectedToken] = useState<string | null>(null);
-  const [context, setContext] = useState<CheckinContextRow | null>(null);
-  const [contextError, setContextError] = useState("");
-  const [clientError, setClientError] = useState("");
-  const [backendError, setBackendError] = useState("");
-  const [result, setResult] = useState<CheckinRow | null>(null);
-  const [isResolving, setIsResolving] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const submissionInFlight = useRef(false);
-
-  if (!__DEV__) return null;
-
-  function resetToken() {
-    if (submissionInFlight.current) return;
-
-    setSelectedToken(null);
-    setContext(null);
-    setContextError("");
-    setClientError("");
-    setBackendError("");
-    setResult(null);
-  }
-
-  async function resolveToken() {
-    const token = tokenInput.trim();
-
-    setContextError("");
-    setClientError("");
-    setBackendError("");
-    setResult(null);
-
-    if (!token || token.length > 256) {
-      setContextError("Enter a TapIt token between 1 and 256 characters.");
-      return;
-    }
-
-    setIsResolving(true);
-
+  async function openSettings() {
     try {
-      const { data, error } = await supabase.rpc("get_checkin_context", {
-        p_token: token,
-      });
-
-      const resolvedContext = firstRow(data);
-
-      if (error) {
-        console.error("[mobile check-in] get_checkin_context failed", error);
-        setContextError("The check-in location could not be loaded. Try again.");
-      } else if (!isCheckinContextRow(resolvedContext)) {
-        setContextError("The backend returned an unexpected check-in context.");
-      } else if (resolvedContext.status === "invalid_tag") {
-        setContextError("This TapIt token is invalid or disabled.");
-      } else {
-        setSelectedToken(token);
-        setContext(resolvedContext);
-      }
+      await Linking.openSettings();
     } catch (error) {
-      console.error("[mobile check-in] get_checkin_context unavailable", error);
-      setContextError("The check-in location could not be loaded. Try again.");
-    } finally {
-      setIsResolving(false);
+      console.error("[mobile check-in] could not open settings", error);
     }
   }
 
-  async function acquireRequiredLocation() {
-    try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-
-      if (!permission.granted) {
-        setClientError(
-          permission.canAskAgain
-            ? "Location permission was denied. Tap CHECK IN to request it again."
-            : "Location permission is disabled for Expo Go. Enable it in Android settings and try again.",
-        );
-        return null;
-      }
-
-      const servicesEnabled = await Location.hasServicesEnabledAsync();
-      if (!servicesEnabled) {
-        setClientError("Location services are unavailable or disabled on this device.");
-        return null;
-      }
-
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-        mayShowUserSettingsDialog: true,
-      });
-      const { accuracy, latitude, longitude } = position.coords;
-
-      if (
-        typeof accuracy !== "number" ||
-        !Number.isFinite(accuracy) ||
-        !Number.isFinite(latitude) ||
-        !Number.isFinite(longitude)
-      ) {
-        setClientError(
-          "The device did not provide a usable location and accuracy value. Try again outdoors or near a window.",
-        );
-        return null;
-      }
-
-      return { accuracy, latitude, longitude };
-    } catch (error) {
-      console.error("[mobile check-in] current location unavailable", error);
-      setClientError(
-        "A fresh location could not be obtained. Check location services and try again.",
-      );
-      return null;
-    }
+  function startSuccessPreview(nextPreview: CheckinPreview) {
+    setPreview(nextPreview);
+    void Haptics.notificationAsync(
+      Haptics.NotificationFeedbackType.Success,
+    ).catch(() => undefined);
   }
 
-  async function performCheckin() {
-    if (
-      submissionInFlight.current ||
-      isSubmitting ||
-      !selectedToken ||
-      !context
-    ) {
-      return;
-    }
-
-    submissionInFlight.current = true;
-    setIsSubmitting(true);
-    setClientError("");
-    setBackendError("");
-    setResult(null);
-
-    try {
-      let latitude: number | null = null;
-      let longitude: number | null = null;
-      let accuracy: number | null = null;
-
-      if (context.requires_location_verification) {
-        const location = await acquireRequiredLocation();
-
-        if (!location) return;
-
-        latitude = location.latitude;
-        longitude = location.longitude;
-        accuracy = location.accuracy;
-      }
-
-      const { data, error } = await supabase.rpc("perform_checkin", {
-        p_token: selectedToken,
-        p_latitude: latitude,
-        p_longitude: longitude,
-        p_accuracy_meters: accuracy,
-      });
-
-      if (error) {
-        console.error("[mobile check-in] perform_checkin failed", error);
-        setBackendError(
-          "The production check-in backend returned an error. Try again.",
-        );
-        return;
-      }
-
-      const checkinResult = firstRow(data);
-      if (!isCheckinRow(checkinResult)) {
-        setBackendError("The backend returned an unexpected check-in response.");
-        return;
-      }
-
-      setResult(checkinResult);
-
-      if (checkinResult.status === "success") {
-        onSuccessfulCheckin();
-      }
-    } catch (error) {
-      console.error("[mobile check-in] perform_checkin unavailable", error);
-      setBackendError("The production check-in backend is unavailable. Try again.");
-    } finally {
-      submissionInFlight.current = false;
-      setIsSubmitting(false);
-    }
+  if (preview?.result.status === "success") {
+    return (
+      <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+        <StatusBar style="light" />
+        <ScrollView
+          contentContainerStyle={styles.successContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <CheckinSuccessView
+            onDone={() => setPreview(null)}
+            result={preview.result}
+            streak={preview.streak}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
   }
 
-  const copy = result ? resultCopy(result) : null;
+  if (preview) {
+    return (
+      <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+        <StatusBar style="light" />
+        <TapItHeader onBack={() => setPreview(null)} />
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <ResultState
+            onDone={() => setPreview(null)}
+            onResetAttempt={() => setPreview(null)}
+            onResetToken={() => setPreview(null)}
+            result={preview.result}
+            showResetToken
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (flow.result?.status === "success") {
+    return (
+      <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+        <StatusBar style="light" />
+        <ScrollView
+          contentContainerStyle={styles.successContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <CheckinSuccessView
+            onDone={onDone}
+            result={flow.result}
+            streak={flow.successStreak}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.screen}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.card}>
-        <Text style={styles.eyebrow}>Development only</Text>
-        <Text style={styles.title}>Test native check-in</Text>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+      <StatusBar style="light" />
+      <TapItHeader onBack={onBack} />
 
-        {!context || !selectedToken ? (
-          <>
-            <Text style={styles.copy}>
-              Enter the token portion of a real TapIt NFC URL. This field is not
-              available in production builds.
-            </Text>
-            <Text style={styles.label}>NFC token</Text>
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isResolving}
-              onChangeText={setTokenInput}
-              onSubmitEditing={() => void resolveToken()}
-              placeholder="Paste token"
-              style={styles.input}
-              value={tokenInput}
-            />
-            {contextError ? <Text style={styles.error}>{contextError}</Text> : null}
-            <Pressable
-              disabled={isResolving || !tokenInput.trim()}
-              onPress={() => void resolveToken()}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                (isResolving || !tokenInput.trim()) && styles.disabled,
-                pressed && styles.pressed,
-              ]}
-            >
-              {isResolving ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Resolve token</Text>
-              )}
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <View style={styles.locationBlock}>
-              <Text style={styles.label}>Fitness location</Text>
-              <Text style={styles.locationName}>
-                {context.location_name ?? "TapIt location"}
-              </Text>
-              <Text style={styles.copy}>
-                {context.requires_location_verification
-                  ? "This location requires GPS verification. Permission will be requested only after CHECK IN is pressed."
-                  : "This location does not require GPS verification."}
-              </Text>
-            </View>
-
-            {result && copy ? (
-              <View style={styles.resultBlock}>
-                <Text style={styles.resultTitle}>{copy.title}</Text>
-                <Text style={styles.copy}>{copy.message}</Text>
-
-                {result.status === "success" ? (
-                  <>
-                    <Text style={styles.metric}>
-                      +{result.total_points_earned} points earned
-                    </Text>
-                    <Text style={styles.copy}>
-                      Check-in points: {result.points_awarded}
-                    </Text>
-                    <Text style={styles.copy}>
-                      Weekly bonus: {result.weekly_bonus_points}
-                    </Text>
-                    <Text style={styles.metric}>
-                      Updated total: {result.total_points ?? "Unavailable"}
-                    </Text>
-                  </>
-                ) : null}
-
-                {result.weekly_goal !== null &&
-                result.weekly_sessions !== null ? (
-                  <Text style={styles.copy}>
-                    Weekly progress: {result.weekly_sessions} / {result.weekly_goal}
+      {isVerifying ? (
+        <VerificationPulse message={verificationMessage} />
+      ) : (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.keyboardView}
+        >
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {!flow.context || !flow.selectedToken ? (
+              isDevelopmentMode ? (
+                <View style={styles.mainState}>
+                  <Text style={styles.eyebrow}>Development check-in</Text>
+                  <Text accessibilityRole="header" style={styles.title}>
+                    Test a real TapIt token.
                   </Text>
+                  <Text style={styles.bodyCopy}>
+                    Enter the token portion of a production NFC URL. Manual
+                    entry remains unavailable in production builds.
+                  </Text>
+
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>NFC token</Text>
+                    <TextInput
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!flow.isResolving}
+                      onChangeText={flow.setTokenInput}
+                      onSubmitEditing={() => void flow.resolveToken()}
+                      placeholder="Paste token"
+                      placeholderTextColor="#6f6b77"
+                      selectionColor="#9b7af2"
+                      style={styles.input}
+                      value={flow.tokenInput}
+                    />
+                  </View>
+
+                  {flow.contextError ? (
+                    <View accessibilityRole="alert" style={styles.inlineIssue}>
+                      <Text style={styles.issueText}>{flow.contextError}</Text>
+                    </View>
+                  ) : null}
+
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={!flow.tokenInput.trim()}
+                    onPress={() => void flow.resolveToken()}
+                    style={({ pressed }) => [
+                      styles.primaryButton,
+                      !flow.tokenInput.trim() && styles.disabled,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.primaryButtonText}>Resolve token</Text>
+                  </Pressable>
+
+                  <View style={styles.previewSection}>
+                    <Text style={styles.previewLabel}>UI preview</Text>
+                    <Text style={styles.previewCopy}>
+                      Development fixtures only. These previews never contact
+                      the check-in backend or change account data.
+                    </Text>
+                    <View style={styles.previewActions}>
+                      <PreviewButton
+                        label="Preview Success"
+                        onPress={() => startSuccessPreview(successPreview)}
+                      />
+                      <PreviewButton
+                        label="Preview Weekly Bonus"
+                        onPress={() => startSuccessPreview(weeklyBonusPreview)}
+                      />
+                      <PreviewButton
+                        label="Preview Cooldown"
+                        onPress={() => setPreview(cooldownPreview)}
+                      />
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.mainState}>
+                  <Text style={styles.eyebrow}>Check-in unavailable</Text>
+                  <Text accessibilityRole="header" style={styles.title}>
+                    We couldn’t open this TapIt tag.
+                  </Text>
+                  <Text accessibilityRole="alert" style={styles.bodyCopy}>
+                    {flow.contextError ||
+                      "The check-in location could not be loaded. Try again."}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => void flow.resolveToken()}
+                    style={({ pressed }) => [
+                      styles.primaryButton,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.primaryButtonText}>Try again</Text>
+                  </Pressable>
+                </View>
+              )
+            ) : flow.result ? (
+              <ResultState
+                onDone={onDone}
+                onResetAttempt={flow.resetAttempt}
+                onResetToken={flow.resetToken}
+                result={flow.result}
+                showResetToken={isDevelopmentMode}
+              />
+            ) : flow.clientIssue || flow.backendError ? (
+              <View style={styles.mainState}>
+                <Text style={styles.eyebrow}>Check-in paused</Text>
+                <Text accessibilityRole="header" style={styles.title}>
+                  {flow.clientIssue?.title ?? "We couldn’t complete this tap."}
+                </Text>
+                <Text accessibilityRole="alert" style={styles.bodyCopy}>
+                  {flow.clientIssue?.message ?? flow.backendError}
+                </Text>
+
+                {flow.clientIssue?.canOpenSettings ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => void openSettings()}
+                    style={({ pressed }) => [
+                      styles.primaryButton,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.primaryButtonText}>Open settings</Text>
+                  </Pressable>
                 ) : null}
 
                 <Pressable
-                  onPress={() => setResult(null)}
+                  accessibilityRole="button"
+                  onPress={flow.resetAttempt}
                   style={({ pressed }) => [
-                    styles.primaryButton,
+                    flow.clientIssue?.canOpenSettings
+                      ? styles.secondaryButton
+                      : styles.primaryButton,
                     pressed && styles.pressed,
                   ]}
                 >
-                  <Text style={styles.primaryButtonText}>Check in again</Text>
+                  <Text
+                    style={
+                      flow.clientIssue?.canOpenSettings
+                        ? styles.secondaryButtonText
+                        : styles.primaryButtonText
+                    }
+                  >
+                    Try again
+                  </Text>
                 </Pressable>
               </View>
             ) : (
-              <>
-                {clientError ? <Text style={styles.error}>{clientError}</Text> : null}
-                {backendError ? <Text style={styles.error}>{backendError}</Text> : null}
+              <View style={styles.mainState}>
+                <Text style={styles.eyebrow}>Ready to check in</Text>
+                <Text accessibilityRole="header" style={styles.locationName}>
+                  {flow.context.location_name ?? "TapIt location"}
+                </Text>
+                <Text style={styles.bodyCopy}>
+                  {flow.context.requires_location_verification
+                    ? "This location requires a fresh GPS verification. Location permission will be requested only after you press CHECK IN."
+                    : "This location does not require GPS verification. Your visit is rewarded only after you press CHECK IN."}
+                </Text>
+
                 <Pressable
-                  disabled={isSubmitting}
-                  onPress={() => void performCheckin()}
+                  accessibilityRole="button"
+                  onPress={() => void flow.performCheckin()}
                   style={({ pressed }) => [
-                    styles.primaryButton,
-                    isSubmitting && styles.disabled,
+                    styles.checkinButton,
                     pressed && styles.pressed,
                   ]}
                 >
-                  {isSubmitting ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>CHECK IN</Text>
-                  )}
+                  <Text style={styles.checkinButtonText}>CHECK IN</Text>
                 </Pressable>
-              </>
+
+                {isDevelopmentMode ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={flow.resetToken}
+                    style={({ pressed }) => [
+                      styles.textButton,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.textButtonText}>Use another token</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      )}
+    </SafeAreaView>
+  );
+}
 
-            <Pressable
-              disabled={isSubmitting}
-              onPress={resetToken}
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.secondaryButtonText}>Use another token</Text>
-            </Pressable>
-          </>
-        )}
+function PreviewButton({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.previewButton,
+        pressed && styles.pressed,
+      ]}
+    >
+      <Text style={styles.previewButtonText}>{label}</Text>
+    </Pressable>
+  );
+}
 
+function ResultState({
+  onDone,
+  onResetAttempt,
+  onResetToken,
+  result,
+  showResetToken,
+}: {
+  onDone: () => void;
+  onResetAttempt: () => void;
+  onResetToken: () => void;
+  result: Exclude<ReturnType<typeof useCheckinFlow>["result"], null>;
+  showResetToken: boolean;
+}) {
+  const copy = getResultCopy(result);
+  const canRetry = copy.retryable;
+
+  return (
+    <View style={styles.mainState}>
+      <Text style={styles.eyebrow}>{copy.eyebrow}</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        {copy.title}
+      </Text>
+      <Text style={styles.bodyCopy}>{copy.message}</Text>
+
+      {result.location_name ? (
+        <Text style={styles.resultDetail}>{result.location_name}</Text>
+      ) : null}
+
+      {result.status === "cooldown" &&
+      result.weekly_goal !== null &&
+      result.weekly_sessions !== null ? (
+        <Text style={styles.resultDetail}>
+          {result.weekly_sessions} / {result.weekly_goal} sessions this week
+        </Text>
+      ) : null}
+
+      <Pressable
+        accessibilityRole="button"
+        onPress={canRetry ? onResetAttempt : onDone}
+        style={({ pressed }) => [
+          styles.primaryButton,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Text style={styles.primaryButtonText}>
+          {canRetry ? "Try again" : "Done"}
+        </Text>
+      </Pressable>
+
+      {showResetToken ? (
         <Pressable
-          disabled={isSubmitting}
-          onPress={onBack}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+          accessibilityRole="button"
+          onPress={onResetToken}
+          style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}
         >
-          <Text style={styles.backButtonText}>Back to profile</Text>
+          <Text style={styles.textButtonText}>Use another token</Text>
         </Pressable>
-      </View>
-    </ScrollView>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#111113",
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  header: {
+    minHeight: 66,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#2c2931",
+    marginHorizontal: 20,
+  },
+  wordmark: {
+    color: "#ffffff",
+    fontFamily: fonts.extraBold,
+    fontSize: 24,
+    letterSpacing: -1.5,
+  },
+  wordmarkAccent: {
+    color: "#9b7af2",
+  },
+  backText: {
+    color: "#aaa6b2",
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+  },
+  content: {
     flexGrow: 1,
     justifyContent: "center",
-    backgroundColor: "#f4f4f0",
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
   },
-  card: {
-    gap: 14,
-    borderRadius: 20,
-    backgroundColor: "#ffffff",
-    padding: 24,
+  successContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  mainState: {
+    width: "100%",
+    maxWidth: 440,
+    alignSelf: "center",
   },
   eyebrow: {
-    color: "#786000",
-    fontSize: 13,
-    fontWeight: "700",
+    color: "#9b7af2",
+    fontFamily: fonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.3,
     textTransform: "uppercase",
   },
   title: {
-    color: "#171717",
-    fontSize: 28,
-    fontWeight: "700",
-  },
-  copy: {
-    color: "#5f6360",
-    fontSize: 15,
-    lineHeight: 21,
-  },
-  label: {
-    color: "#272a28",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: "#c9ceca",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    color: "#171717",
-    fontSize: 16,
-  },
-  locationBlock: {
-    gap: 8,
-    borderRadius: 12,
-    backgroundColor: "#f3f6f4",
-    padding: 16,
+    marginTop: 10,
+    color: "#ffffff",
+    fontFamily: fonts.bold,
+    fontSize: 37,
+    letterSpacing: -2.1,
+    lineHeight: 41,
   },
   locationName: {
-    color: "#171717",
-    fontSize: 22,
-    fontWeight: "700",
+    marginTop: 10,
+    color: "#ffffff",
+    fontFamily: fonts.bold,
+    fontSize: 42,
+    letterSpacing: -2.5,
+    lineHeight: 46,
   },
-  resultBlock: {
+  bodyCopy: {
+    maxWidth: 380,
+    marginTop: 17,
+    color: "#aaa6b2",
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  field: {
+    gap: 8,
+    marginTop: 32,
+  },
+  fieldLabel: {
+    color: "#d2ced8",
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+  },
+  input: {
+    minHeight: 52,
+    borderWidth: 1,
+    borderColor: "#3b3742",
+    borderRadius: 10,
+    backgroundColor: "#1b191e",
+    paddingHorizontal: 14,
+    color: "#ffffff",
+    fontFamily: fonts.regular,
+    fontSize: 16,
+  },
+  inlineIssue: {
+    marginTop: 14,
+    borderLeftWidth: 2,
+    borderLeftColor: "#d26857",
+    paddingLeft: 12,
+  },
+  previewSection: {
+    marginTop: 38,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#343039",
+    paddingTop: 24,
+  },
+  previewLabel: {
+    color: "#9b7af2",
+    fontFamily: fonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.3,
+    textTransform: "uppercase",
+  },
+  previewCopy: {
+    marginTop: 8,
+    color: "#85818d",
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  previewActions: {
     gap: 9,
-    borderRadius: 12,
-    backgroundColor: "#f3f6f4",
-    padding: 16,
+    marginTop: 16,
   },
-  resultTitle: {
-    color: "#171717",
-    fontSize: 20,
-    fontWeight: "700",
+  previewButton: {
+    minHeight: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#494353",
+    borderRadius: 9,
+    paddingHorizontal: 14,
   },
-  metric: {
-    color: "#155e3b",
-    fontSize: 18,
-    fontWeight: "700",
+  previewButtonText: {
+    color: "#d6d1de",
+    fontFamily: fonts.semibold,
+    fontSize: 13,
   },
-  error: {
-    color: "#a32121",
-    fontSize: 14,
+  issueText: {
+    color: "#d7a49b",
+    fontFamily: fonts.regular,
+    fontSize: 13,
     lineHeight: 20,
   },
   primaryButton: {
-    minHeight: 50,
+    minHeight: 52,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 10,
-    backgroundColor: "#155e3b",
-    paddingHorizontal: 16,
+    marginTop: 28,
+    borderRadius: 11,
+    backgroundColor: "#7b52e8",
+    paddingHorizontal: 20,
   },
   primaryButtonText: {
     color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "700",
+    fontFamily: fonts.bold,
+    fontSize: 15,
   },
-  secondaryButton: {
-    minHeight: 48,
+  checkinButton: {
+    minHeight: 58,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 36,
+    borderRadius: 12,
+    backgroundColor: "#7b52e8",
+    paddingHorizontal: 20,
+  },
+  checkinButtonText: {
+    color: "#ffffff",
+    fontFamily: fonts.extraBold,
+    fontSize: 16,
+    letterSpacing: 0.8,
+  },
+  secondaryButton: {
+    minHeight: 50,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
     borderWidth: 1,
-    borderColor: "#155e3b",
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    borderColor: "#4a4455",
+    borderRadius: 11,
+    paddingHorizontal: 20,
   },
   secondaryButtonText: {
-    color: "#155e3b",
-    fontSize: 15,
-    fontWeight: "700",
+    color: "#d6d1de",
+    fontFamily: fonts.semibold,
+    fontSize: 14,
   },
-  backButton: {
+  textButton: {
     minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 10,
+    paddingHorizontal: 12,
   },
-  backButtonText: {
-    color: "#5f6360",
-    fontSize: 15,
-    fontWeight: "600",
+  textButtonText: {
+    color: "#aaa6b2",
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+  },
+  resultDetail: {
+    marginTop: 16,
+    color: "#d6d1de",
+    fontFamily: fonts.semibold,
+    fontSize: 14,
   },
   disabled: {
-    opacity: 0.45,
+    opacity: 0.42,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: 0.7,
   },
 });

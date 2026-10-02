@@ -4,19 +4,50 @@ import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
 import { Inter_700Bold } from "@expo-google-fonts/inter/700Bold";
 import { Inter_800ExtraBold } from "@expo-google-fonts/inter/800ExtraBold";
 import { useFonts } from "expo-font";
-import { Stack, SplashScreen } from "expo-router";
+import { router, Stack, SplashScreen, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { SessionProvider, useSession } from "../auth/SessionProvider";
+import {
+  PendingCheckinProvider,
+  usePendingCheckin,
+} from "../checkin/PendingCheckinProvider";
 import { colors, fonts } from "../theme/tokens";
 
 void SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { isRestoring, session } = useSession();
+  const { isHydrating, pendingToken } = usePendingCheckin();
+  const pathname = usePathname();
+  const handoffToken = useRef<string | null>(null);
 
-  if (isRestoring) {
+  useEffect(() => {
+    if (!pendingToken) {
+      handoffToken.current = null;
+      return;
+    }
+
+    // Future onboarding can extend this gate without coupling continuation to
+    // the sign-in screen or changing pending-token persistence.
+    const canContinuePendingCheckin = Boolean(session);
+
+    if (
+      isRestoring ||
+      isHydrating ||
+      !canContinuePendingCheckin ||
+      pathname.startsWith("/checkin/") ||
+      handoffToken.current === pendingToken
+    ) {
+      return;
+    }
+
+    handoffToken.current = pendingToken;
+    router.replace(`/checkin/${pendingToken}`);
+  }, [isHydrating, isRestoring, pathname, pendingToken, session]);
+
+  if (isRestoring || isHydrating) {
     return (
       <View style={styles.restoring}>
         <ActivityIndicator
@@ -37,6 +68,7 @@ function RootNavigator() {
       <Stack.Protected guard={!session}>
         <Stack.Screen name="sign-in" />
       </Stack.Protected>
+      <Stack.Screen name="checkin/[token]" />
     </Stack>
   );
 }
@@ -60,8 +92,10 @@ export default function RootLayout() {
 
   return (
     <SessionProvider>
-      <StatusBar style="dark" />
-      <RootNavigator />
+      <PendingCheckinProvider>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </PendingCheckinProvider>
     </SessionProvider>
   );
 }

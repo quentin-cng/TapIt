@@ -8,8 +8,9 @@ export default function DevelopmentCheckinRoute() {
 
   return (
     <CheckinScreen
+      mode="development"
       onBack={() => router.back()}
-      onSuccessfulCheckin={() => undefined}
+      onDone={() => router.dismissTo("/")}
     />
   );
 }
