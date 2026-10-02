@@ -11,7 +11,7 @@ const labels: Record<FriendActionMode, string> = {
   cancel: "Cancel",
   accept: "Accept",
   decline: "Decline",
-  remove: "Remove",
+  remove: "Remove friend",
 };
 
 type FriendActionButtonProps = {
@@ -32,6 +32,7 @@ export function FriendActionButton({
 }: FriendActionButtonProps) {
   const [isPending, setIsPending] = useState(false);
   const isPrimary = mode === "send" || mode === "accept";
+  const isDestructive = mode === "remove";
 
   async function handlePress() {
     if (isPending) return;
@@ -56,7 +57,12 @@ export function FriendActionButton({
       {isPending ? (
         <ActivityIndicator color={isPrimary ? colors.surface : colors.textSecondary} size="small" />
       ) : (
-        <Text style={isPrimary ? styles.primaryLabel : styles.textLabel}>
+        <Text
+          style={[
+            isPrimary ? styles.primaryLabel : styles.textLabel,
+            isDestructive && styles.destructiveLabel,
+          ]}
+        >
           {labels[mode]}
         </Text>
       )}
@@ -89,6 +95,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 12,
     textDecorationLine: "underline",
+  },
+  destructiveLabel: {
+    color: colors.danger,
+    textDecorationLine: "none",
   },
   pressed: {
     opacity: 0.7,

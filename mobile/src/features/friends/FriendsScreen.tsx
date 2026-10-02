@@ -1,6 +1,9 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -8,13 +11,13 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
-import { ProgressBar } from "../../components/ProgressBar";
 import { resolveDisplayName } from "../../domain/profile-identity";
 import { colors, fonts, radii } from "../../theme/tokens";
 import { FriendActionButton } from "./FriendActionButton";
+import { FriendConsistencyRow } from "./FriendConsistencyRow";
 import {
   type FriendActionResult,
   type FriendView,
@@ -26,7 +29,9 @@ import {
 function Initial({ name }: { name: string }) {
   return (
     <View accessibilityElementsHidden style={styles.initial}>
-      <Text style={styles.initialText}>{name.charAt(0).toUpperCase()}</Text>
+      <Text style={styles.initialText}>
+        {Array.from(name.trim())[0]?.toLocaleUpperCase("en-CA") ?? "T"}
+      </Text>
     </View>
   );
 }
@@ -58,9 +63,6 @@ function IncomingRequestRow({
           <Text numberOfLines={1} style={styles.username}>
             @{request.profile.username}
           </Text>
-          <Text style={styles.secondaryMetric}>
-            {request.profile.total_points} total points
-          </Text>
         </View>
       </View>
       <View style={styles.requestActions}>
@@ -73,83 +75,6 @@ function IncomingRequestRow({
         <FriendActionButton
           entityId={request.id}
           mode="decline"
-          onAction={onAction}
-          onResult={onResult}
-        />
-      </View>
-    </View>
-  );
-}
-
-function FriendRow({
-  friend,
-  onAction,
-  onResult,
-}: {
-  friend: FriendView;
-  onAction: ActionHandler;
-  onResult: (result: FriendActionResult) => void;
-}) {
-  const displayName = resolveDisplayName(
-    friend.profile.display_name,
-    friend.profile.username,
-  );
-  const goal = friend.weeklyStat?.currentGoal;
-  const sessions = friend.weeklyStat?.currentSessions ?? 0;
-  const goalComplete = friend.weeklyStat?.currentGoalAchieved === true;
-
-  return (
-    <View style={styles.friendRow}>
-      <View style={styles.friendHeading}>
-        <View style={styles.identityLine}>
-          <Initial name={displayName} />
-          <View style={styles.identityText}>
-            <Text numberOfLines={1} style={styles.identityName}>
-              {displayName}
-            </Text>
-            <Text numberOfLines={1} style={styles.username}>
-              @{friend.profile.username}
-            </Text>
-          </View>
-        </View>
-        <Text
-          style={[
-            styles.goalStatus,
-            goalComplete && styles.goalStatusComplete,
-          ]}
-        >
-          {goalComplete ? "Goal complete" : goal ? "In progress" : "No goal"}
-        </Text>
-      </View>
-
-      <View style={styles.progressBlock}>
-        <Text style={styles.weeklyProgressText}>
-          {goal === null || goal === undefined
-            ? "No weekly goal"
-            : `${sessions} / ${goal} this week`}
-        </Text>
-        {goal ? (
-          <ProgressBar
-            height={5}
-            label={`${displayName} completed ${sessions} of ${goal} weekly sessions`}
-            max={goal}
-            value={sessions}
-          />
-        ) : null}
-      </View>
-
-      <View style={styles.friendFooter}>
-        <View style={styles.friendFacts}>
-          <Text style={styles.streakText}>
-            Weekly streak · {friend.weeklyStat?.currentWeeklyGoalStreak ?? 0} wk
-          </Text>
-          <Text style={styles.secondaryMetric}>
-            {friend.profile.total_points} total points
-          </Text>
-        </View>
-        <FriendActionButton
-          entityId={friend.profile.profile_id}
-          mode="remove"
           onAction={onAction}
           onResult={onResult}
         />
@@ -180,12 +105,11 @@ function SearchResultRow({
           <Text numberOfLines={1} style={styles.username}>
             @{profile.username}
           </Text>
-          <Text style={styles.secondaryMetric}>{profile.total_points} total points</Text>
         </View>
       </View>
 
       {profile.relationship_status === "friends" ? (
-        <Text style={[styles.relationshipStatus, styles.goalStatusComplete]}>
+        <Text style={[styles.relationshipStatus, styles.friendsStatus]}>
           Friends
         </Text>
       ) : profile.relationship_status === "outgoing" ? (
@@ -201,7 +125,7 @@ function SearchResultRow({
           ) : null}
         </View>
       ) : profile.relationship_status === "incoming" ? (
-        <Text style={styles.relationshipStatus}>Respond</Text>
+        <Text style={styles.relationshipStatus}>Respond below</Text>
       ) : (
         <FriendActionButton
           entityId={profile.username}
@@ -220,6 +144,10 @@ export function FriendsScreen() {
   const [actionNotice, setActionNotice] = useState<FriendActionResult | null>(
     null,
   );
+  const [friendForRemoval, setFriendForRemoval] = useState<FriendView | null>(
+    null,
+  );
+  const [removalError, setRemovalError] = useState("");
   const {
     data,
     error,
@@ -253,6 +181,24 @@ export function FriendsScreen() {
   function submitSearch() {
     setActionNotice(null);
     void runSearch(searchInput);
+  }
+
+  function handleSearchInput(value: string) {
+    setSearchInput(value);
+
+    if (!value.trim() && searchedQuery) {
+      void runSearch("");
+    }
+  }
+
+  function closeRemovalSheet() {
+    setFriendForRemoval(null);
+    setRemovalError("");
+  }
+
+  function openRemovalSheet(friend: FriendView) {
+    setRemovalError("");
+    setFriendForRemoval(friend);
   }
 
   if (isLoading && !data) {
@@ -290,55 +236,44 @@ export function FriendsScreen() {
     );
   }
 
+  const removalName = friendForRemoval
+    ? resolveDisplayName(
+        friendForRemoval.profile.display_name,
+        friendForRemoval.profile.username,
+      )
+    : "";
+
   return (
-    <AppScreen refreshControl={refreshControl}>
-      <Text accessibilityRole="header" style={styles.title}>
-        Friends
-      </Text>
-
-      {data.hasDataError ? (
-        <Text accessibilityRole="alert" style={styles.inlineError}>
-          We couldn’t load all friend data. Pull down to try again.
+    <>
+      <AppScreen refreshControl={refreshControl}>
+        <Text accessibilityRole="header" style={styles.title}>
+          Friends
         </Text>
-      ) : null}
 
-      {actionNotice ? (
-        <Text
-          accessibilityRole={actionNotice.status === "error" ? "alert" : "text"}
-          style={[
-            styles.actionNotice,
-            actionNotice.status === "error"
-              ? styles.noticeError
-              : styles.noticeSuccess,
-          ]}
-        >
-          {actionNotice.message}
-        </Text>
-      ) : null}
-
-      <View style={styles.searchSection}>
-        <View style={styles.sectionHeading}>
-          <View>
-            <Text style={styles.sectionLabel}>Find friends</Text>
-            <Text style={styles.sectionTitle}>Search by username</Text>
-          </View>
-        </View>
         <View style={styles.searchControls}>
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isSearching}
-            maxLength={30}
-            onChangeText={setSearchInput}
-            onSubmitEditing={submitSearch}
-            placeholder="Search username"
-            placeholderTextColor={colors.textMuted}
-            returnKeyType="search"
-            spellCheck={false}
-            style={styles.searchInput}
-            value={searchInput}
-          />
+          <View style={styles.searchField}>
+            <MaterialCommunityIcons
+              color={colors.textMuted}
+              name="magnify"
+              size={20}
+            />
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isSearching}
+              maxLength={30}
+              onChangeText={handleSearchInput}
+              onSubmitEditing={submitSearch}
+              placeholder="Search friends…"
+              placeholderTextColor={colors.textMuted}
+              returnKeyType="search"
+              spellCheck={false}
+              style={styles.searchInput}
+              value={searchInput}
+            />
+          </View>
           <Pressable
+            accessibilityLabel="Search friends"
             accessibilityRole="button"
             disabled={isSearching || !searchInput.trim()}
             onPress={submitSearch}
@@ -351,7 +286,11 @@ export function FriendsScreen() {
             {isSearching ? (
               <ActivityIndicator color={colors.surface} size="small" />
             ) : (
-              <Text style={styles.searchButtonText}>Search</Text>
+              <MaterialCommunityIcons
+                color={colors.surface}
+                name="arrow-right"
+                size={20}
+              />
             )}
           </Pressable>
         </View>
@@ -360,11 +299,7 @@ export function FriendsScreen() {
           <Text accessibilityRole="alert" style={styles.fieldError}>
             {searchError}
           </Text>
-        ) : !searchedQuery ? (
-          <Text style={styles.fieldHelp}>
-            Enter a username to find another member.
-          </Text>
-        ) : !isSearching && searchProfiles.length === 0 ? (
+        ) : searchedQuery && !isSearching && searchProfiles.length === 0 ? (
           <View style={styles.searchEmpty}>
             <Text style={styles.emptyTitle}>No matching users</Text>
             <Text style={styles.emptyCopy}>Check the username and try again.</Text>
@@ -383,177 +318,197 @@ export function FriendsScreen() {
             ))}
           </View>
         ) : null}
-      </View>
 
-      {data.incomingRequests.length ? (
-        <View style={styles.requestsSection}>
-          <View style={styles.sectionHeadingRow}>
-            <View>
-              <Text style={styles.sectionLabel}>Friend requests</Text>
-              <Text style={styles.sectionTitle}>
-                {data.incomingRequests.length}{" "}
-                {data.incomingRequests.length === 1 ? "request" : "requests"}
+        {data.hasDataError ? (
+          <Text accessibilityRole="alert" style={styles.inlineError}>
+            Some friend or weekly data could not be loaded. Pull down to try again.
+          </Text>
+        ) : null}
+
+        {actionNotice ? (
+          <Text
+            accessibilityRole={actionNotice.status === "error" ? "alert" : "text"}
+            style={[
+              styles.actionNotice,
+              actionNotice.status === "error"
+                ? styles.noticeError
+                : styles.noticeSuccess,
+            ]}
+          >
+            {actionNotice.message}
+          </Text>
+        ) : null}
+
+        <View style={styles.friendsSection}>
+          <Text style={styles.sectionLabel}>
+            {data.friends.length} {data.friends.length === 1 ? "friend" : "friends"}
+          </Text>
+
+          {data.friends.length ? (
+            <View style={styles.friendList}>
+              {data.friends.map((friend) => (
+                <FriendConsistencyRow
+                  friend={friend}
+                  key={friend.profile.profile_id}
+                  onOpenActions={openRemovalSheet}
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyFriends}>
+              <View style={styles.emptyIcon}>
+                <MaterialCommunityIcons
+                  color={colors.purple}
+                  name="account-multiple-outline"
+                  size={25}
+                />
+              </View>
+              <Text style={styles.emptyTitle}>No friends yet</Text>
+              <Text style={styles.emptyCopy}>
+                Search for another TapIt member to send a friend request.
               </Text>
             </View>
-          </View>
-          <View style={styles.requestList}>
-            {data.incomingRequests.map((request) => (
-              <IncomingRequestRow
-                key={request.id}
-                onAction={performAction}
-                onResult={setActionNotice}
-                request={request}
-              />
-            ))}
-          </View>
-        </View>
-      ) : null}
-
-      <View style={styles.friendsSection}>
-        <View style={styles.sectionHeadingRow}>
-          <View>
-            <Text style={styles.sectionLabel}>Your friends</Text>
-            <Text style={styles.sectionTitle}>
-              {data.friends.length} connected
-            </Text>
-          </View>
+          )}
         </View>
 
-        {data.friends.length ? (
-          <View style={styles.friendList}>
-            {data.friends.map((friend) => (
-              <FriendRow
-                friend={friend}
-                key={friend.profile.profile_id}
-                onAction={performAction}
-                onResult={setActionNotice}
-              />
-            ))}
+        {data.incomingRequests.length ? (
+          <View style={styles.requestsSection}>
+            <View style={styles.requestHeading}>
+              <Text style={styles.sectionLabel}>Friend requests</Text>
+              <View style={styles.requestCount}>
+                <Text style={styles.requestCountText}>
+                  {data.incomingRequests.length}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.requestList}>
+              {data.incomingRequests.map((request) => (
+                <IncomingRequestRow
+                  key={request.id}
+                  onAction={performAction}
+                  onResult={setActionNotice}
+                  request={request}
+                />
+              ))}
+            </View>
           </View>
-        ) : (
-          <View style={styles.emptyFriends}>
-            <Text style={styles.emptyTitle}>No friends yet</Text>
-            <Text style={styles.emptyCopy}>
-              Find another TapIt member and send a friend request.
-            </Text>
-          </View>
-        )}
-      </View>
-    </AppScreen>
+        ) : null}
+      </AppScreen>
+
+      <Modal
+        animationType="slide"
+        onRequestClose={closeRemovalSheet}
+        statusBarTranslucent
+        transparent
+        visible={friendForRemoval !== null}
+      >
+        <View style={styles.modalBackdrop}>
+          <SafeAreaView edges={["bottom"]} style={styles.modalSafeArea}>
+            <View style={styles.actionSheet}>
+              <View style={styles.actionSheetHandle} />
+              <Text style={styles.actionSheetTitle}>{removalName}</Text>
+              <Text style={styles.actionSheetCopy}>
+                Remove this person from your TapIt friends?
+              </Text>
+              {friendForRemoval ? (
+                <FriendActionButton
+                  entityId={friendForRemoval.profile.profile_id}
+                  mode="remove"
+                  onAction={performAction}
+                  onResult={(result) => {
+                    if (result.status === "success") {
+                      setActionNotice(result);
+                      closeRemovalSheet();
+                    } else {
+                      setRemovalError(result.message);
+                    }
+                  }}
+                />
+              ) : null}
+              {removalError ? (
+                <Text accessibilityRole="alert" style={styles.removalError}>
+                  {removalError}
+                </Text>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                onPress={closeRemovalSheet}
+                style={({ pressed }) => [
+                  styles.cancelButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   title: {
-    marginBottom: 36,
+    marginBottom: 17,
     color: colors.textPrimary,
     fontFamily: fonts.bold,
-    fontSize: 46,
-    letterSpacing: -2.8,
-    lineHeight: 49,
-  },
-  inlineError: {
-    marginTop: -16,
-    marginBottom: 24,
-    color: colors.danger,
-    fontFamily: fonts.medium,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  actionNotice: {
-    marginTop: -16,
-    marginBottom: 24,
-    fontFamily: fonts.medium,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  noticeError: {
-    color: colors.danger,
-  },
-  noticeSuccess: {
-    color: colors.success,
-  },
-  searchSection: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: 24,
-  },
-  sectionHeading: {
-    marginBottom: 16,
-  },
-  sectionHeadingRow: {
-    marginBottom: 16,
-  },
-  sectionLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.bold,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
-  sectionTitle: {
-    marginTop: 6,
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 18,
-    letterSpacing: -0.5,
+    fontSize: 34,
+    letterSpacing: -1.8,
+    lineHeight: 38,
   },
   searchControls: {
     flexDirection: "row",
     gap: 8,
   },
-  searchInput: {
-    minHeight: 48,
+  searchField: {
+    minHeight: 46,
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.medium,
+    borderColor: colors.border,
+    borderRadius: 23,
     backgroundColor: colors.surface,
     paddingHorizontal: 14,
+  },
+  searchInput: {
+    minWidth: 0,
+    flex: 1,
     color: colors.textPrimary,
     fontFamily: fonts.regular,
-    fontSize: 15,
+    fontSize: 14,
+    paddingVertical: 0,
   },
   searchButton: {
-    minWidth: 78,
-    minHeight: 48,
+    width: 46,
+    height: 46,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radii.medium,
+    borderRadius: 23,
     backgroundColor: colors.purple,
-    paddingHorizontal: 14,
-  },
-  searchButtonText: {
-    color: colors.surface,
-    fontFamily: fonts.bold,
-    fontSize: 13,
-  },
-  fieldHelp: {
-    marginTop: 12,
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 12,
   },
   fieldError: {
-    marginTop: 12,
+    marginTop: 9,
     color: colors.danger,
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: 11,
   },
   searchResults: {
-    marginTop: 16,
+    marginTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
   searchResultRow: {
-    minHeight: 70,
+    minHeight: 66,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
-    paddingVertical: 14,
+    paddingVertical: 11,
   },
   searchActionState: {
     alignItems: "flex-end",
@@ -561,63 +516,57 @@ const styles = StyleSheet.create({
   relationshipStatus: {
     color: colors.textSecondary,
     fontFamily: fonts.semibold,
-    fontSize: 12,
+    fontSize: 11,
+  },
+  friendsStatus: {
+    color: colors.success,
   },
   searchEmpty: {
-    marginTop: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    paddingVertical: 20,
+    marginTop: 12,
+    borderRadius: radii.medium,
+    backgroundColor: colors.surfaceElevated,
+    padding: 15,
   },
-  requestsSection: {
-    marginTop: 44,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: 24,
+  inlineError: {
+    marginTop: 13,
+    color: colors.danger,
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    lineHeight: 17,
   },
-  requestList: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+  actionNotice: {
+    marginTop: 13,
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    lineHeight: 17,
   },
-  requestRow: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingVertical: 15,
+  noticeError: {
+    color: colors.danger,
   },
-  requestActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 8,
-    marginTop: 10,
+  noticeSuccess: {
+    color: colors.success,
   },
   friendsSection: {
-    marginTop: 48,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: 24,
+    marginTop: 26,
+  },
+  sectionLabel: {
+    color: colors.textSecondary,
+    fontFamily: fonts.bold,
+    fontSize: 10,
+    letterSpacing: 1.05,
+    textTransform: "uppercase",
   },
   friendList: {
+    marginTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
-  },
-  friendRow: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingVertical: 18,
-  },
-  friendHeading: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
   },
   identityLine: {
     minWidth: 0,
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   initial: {
     width: 38,
@@ -646,63 +595,131 @@ const styles = StyleSheet.create({
   username: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 12,
-  },
-  secondaryMetric: {
-    color: colors.textMuted,
-    fontFamily: fonts.regular,
     fontSize: 11,
-  },
-  goalStatus: {
-    flexShrink: 0,
-    color: colors.textSecondary,
-    fontFamily: fonts.semibold,
-    fontSize: 11,
-  },
-  goalStatusComplete: {
-    color: colors.success,
-  },
-  progressBlock: {
-    gap: 8,
-    marginTop: 16,
-  },
-  weeklyProgressText: {
-    color: colors.textPrimary,
-    fontFamily: fonts.semibold,
-    fontSize: 13,
-  },
-  friendFooter: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 12,
-    marginTop: 12,
-  },
-  friendFacts: {
-    gap: 4,
-  },
-  streakText: {
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    fontSize: 12,
   },
   emptyFriends: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    paddingVertical: 24,
+    alignItems: "center",
+    marginTop: 10,
+    borderRadius: radii.large,
+    backgroundColor: "#f0ebfc",
+    paddingHorizontal: 22,
+    paddingVertical: 27,
+  },
+  emptyIcon: {
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 24,
+    backgroundColor: "#ded3f8",
   },
   emptyTitle: {
+    marginTop: 11,
     color: colors.textPrimary,
     fontFamily: fonts.semibold,
     fontSize: 14,
   },
   emptyCopy: {
-    marginTop: 5,
+    marginTop: 4,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 17,
+    textAlign: "center",
+  },
+  requestsSection: {
+    marginTop: 30,
+  },
+  requestHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  requestCount: {
+    minWidth: 23,
+    height: 23,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    backgroundColor: "#e5dcfa",
+    paddingHorizontal: 6,
+  },
+  requestCountText: {
+    color: colors.purpleDark,
+    fontFamily: fonts.bold,
+    fontSize: 10,
+  },
+  requestList: {
+    marginTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  requestRow: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    paddingVertical: 13,
+  },
+  requestActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 9,
+    marginTop: 8,
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(17, 17, 19, 0.42)",
+  },
+  modalSafeArea: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    backgroundColor: colors.background,
+  },
+  actionSheet: {
+    alignItems: "stretch",
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: 24,
+  },
+  actionSheetHandle: {
+    width: 38,
+    height: 4,
+    alignSelf: "center",
+    borderRadius: 2,
+    backgroundColor: colors.borderStrong,
+  },
+  actionSheetTitle: {
+    marginTop: 20,
+    color: colors.textPrimary,
+    fontFamily: fonts.bold,
+    fontSize: 21,
+    letterSpacing: -0.6,
+  },
+  actionSheetCopy: {
+    marginTop: 6,
+    marginBottom: 10,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  removalError: {
+    marginTop: 8,
+    color: colors.danger,
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    lineHeight: 17,
+  },
+  cancelButton: {
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  cancelButtonText: {
+    color: colors.textSecondary,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
   },
   loadingState: {
     flex: 1,
@@ -748,9 +765,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: 0.72,
   },
   disabled: {
-    opacity: 0.45,
+    opacity: 0.42,
   },
 });
