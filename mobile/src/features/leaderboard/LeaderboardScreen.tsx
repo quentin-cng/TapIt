@@ -16,60 +16,14 @@ import {
 } from "../../domain/leaderboard-commentary";
 import { colors, fonts, radii } from "../../theme/tokens";
 import { GeneralLeaderboardPrivacyToggle } from "./GeneralLeaderboardPrivacyToggle";
+import { LeaderboardPodium } from "./LeaderboardPodium";
+import { LeaderboardRankingRow } from "./LeaderboardRankingRow";
+import { LeaderboardSegmentedControl } from "./LeaderboardSegmentedControl";
 import {
-  type FriendsLeaderboardRow,
-  type GeneralLeaderboardRow,
   type LeaderboardData,
   type LeaderboardView,
   useLeaderboardData,
 } from "./useLeaderboardData";
-
-type RankingRow = FriendsLeaderboardRow | GeneralLeaderboardRow;
-
-function LeaderboardRow({
-  row,
-  view,
-}: {
-  row: RankingRow;
-  view: LeaderboardView;
-}) {
-  const bestStreak =
-    view === "friends" && "bestWeeklyGoalStreak" in row
-      ? row.bestWeeklyGoalStreak
-      : null;
-
-  return (
-    <View style={[styles.row, row.isCurrentUser && styles.currentUserRow]}>
-      <Text style={styles.rank}>{row.rank}</Text>
-      <View style={styles.user}>
-        <View style={styles.identity}>
-          <Text numberOfLines={1} style={styles.displayName}>
-            {row.displayName}
-          </Text>
-          {row.username ? (
-            <Text numberOfLines={1} style={styles.username}>
-              @{row.username}
-            </Text>
-          ) : null}
-        </View>
-        {row.isCurrentUser ? <Text style={styles.youLabel}>You</Text> : null}
-      </View>
-      <View
-        style={[
-          styles.rowStats,
-          view === "general" && styles.generalRowStats,
-        ]}
-      >
-        <Text style={styles.points}>
-          {row.totalPoints} <Text style={styles.pointsUnit}>pts</Text>
-        </Text>
-        {bestStreak !== null ? (
-          <Text style={styles.streak}>{bestStreak} wk</Text>
-        ) : null}
-      </View>
-    </View>
-  );
-}
 
 function LeaderboardContent({
   activeView,
@@ -98,54 +52,50 @@ function LeaderboardContent({
     activeView === "friends"
       ? getFriendsLeaderboardCommentary(commentaryEntries)
       : getGeneralLeaderboardCommentary(commentaryEntries);
+  const podiumRows = data.rows.slice(0, 3);
+  const remainingRows = data.rows.slice(3);
 
   return (
     <>
-      <Text style={styles.commentary}>{commentary}</Text>
-
-      <View style={styles.heading}>
-        <View>
-          <Text style={styles.sectionLabel}>
-            {activeView === "friends" ? "Your circle" : "General standings"}
-          </Text>
-          <Text style={styles.sectionTitle}>
-            {activeView === "friends" ? "Friends ranking" : "Top 100"}
-          </Text>
-        </View>
-        {activeView === "general" ? (
+      {activeView === "general" ? (
+        <View style={styles.generalControls}>
+          <View style={styles.generalCopy}>
+            <Text style={styles.generalTitle}>General top 100</Text>
+            <Text style={styles.generalDescription}>
+              Lifetime points across TapIt
+            </Text>
+          </View>
           <GeneralLeaderboardPrivacyToggle
             isSaving={isSavingPreference}
             message={preferenceMessage}
             onChange={(value) => void onPreferenceChange(value)}
             value={generalPreference}
           />
-        ) : null}
-      </View>
-
-      <View style={styles.columnLabels}>
-        <Text style={styles.rankColumnLabel}>Rank</Text>
-        <Text style={styles.userColumnLabel}>Member</Text>
-        <View
-          style={[
-            styles.statColumnLabels,
-            activeView === "general" && styles.generalRowStats,
-          ]}
-        >
-          <Text style={styles.columnLabel}>Points</Text>
-          {activeView === "friends" ? (
-            <Text style={styles.columnLabel}>Best</Text>
-          ) : null}
         </View>
-      </View>
+      ) : null}
 
       {data.rows.length ? (
-        <View style={styles.list}>
-          {data.rows.map((row) => (
-            <LeaderboardRow key={row.key} row={row} view={activeView} />
-          ))}
-        </View>
+        <>
+          <LeaderboardPodium rows={podiumRows} />
+          <Text style={styles.commentary}>{commentary}</Text>
+
+          {remainingRows.length ? (
+            <View style={styles.rankingList}>
+              {remainingRows.map((row) => (
+                <LeaderboardRankingRow
+                  key={row.key}
+                  row={row}
+                  view={activeView}
+                />
+              ))}
+            </View>
+          ) : null}
+        </>
       ) : (
         <View style={styles.emptyState}>
+          <View style={styles.emptyInitial}>
+            <Text style={styles.emptyInitialText}>—</Text>
+          </View>
           <Text style={styles.emptyTitle}>No rankings yet.</Text>
           <Text style={styles.emptyCopy}>
             Points from the first check-in will appear here.
@@ -156,11 +106,6 @@ function LeaderboardContent({
       {activeView === "friends" && data.rows.length === 1 ? (
         <Text style={styles.note}>
           Add friends to turn this into a competition.
-        </Text>
-      ) : null}
-      {activeView === "general" ? (
-        <Text style={styles.note}>
-          General leaderboard: the top 100 TapIt profiles globally.
         </Text>
       ) : null}
     </>
@@ -204,33 +149,10 @@ export function LeaderboardScreen() {
         Leaderboard
       </Text>
 
-      <View accessibilityRole="tablist" style={styles.selector}>
-        {(["friends", "general"] as const).map((view) => {
-          const selected = activeView === view;
-          return (
-            <Pressable
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              key={view}
-              onPress={() => setActiveView(view)}
-              style={({ pressed }) => [
-                styles.selectorButton,
-                selected && styles.selectorButtonActive,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.selectorLabel,
-                  selected && styles.selectorLabelActive,
-                ]}
-              >
-                {view === "friends" ? "Friends" : "General"}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <LeaderboardSegmentedControl
+        onChange={setActiveView}
+        value={activeView}
+      />
 
       {!data && (isLoading || !error) ? (
         <View style={styles.loadingState}>
@@ -271,200 +193,77 @@ export function LeaderboardScreen() {
 
 const styles = StyleSheet.create({
   title: {
-    marginBottom: 24,
+    marginBottom: 17,
     color: colors.textPrimary,
     fontFamily: fonts.bold,
-    fontSize: 46,
-    letterSpacing: -2.8,
-    lineHeight: 49,
+    fontSize: 34,
+    letterSpacing: -1.8,
+    lineHeight: 38,
   },
-  selector: {
+  generalControls: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 15,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+    paddingBottom: 12,
   },
-  selectorButton: {
+  generalCopy: {
+    minWidth: 0,
     flex: 1,
-    alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-    paddingVertical: 12,
+    gap: 2,
   },
-  selectorButtonActive: {
-    borderBottomColor: colors.purple,
-  },
-  selectorLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.bold,
+  generalTitle: {
+    color: colors.textPrimary,
+    fontFamily: fonts.semibold,
     fontSize: 12,
   },
-  selectorLabelActive: {
-    color: colors.purple,
+  generalDescription: {
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 10,
   },
   commentary: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingVertical: 18,
+    marginTop: 13,
     color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  heading: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 16,
-    paddingTop: 28,
-    paddingBottom: 14,
-  },
-  sectionLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.bold,
-    fontSize: 11,
-    letterSpacing: 1.1,
-    textTransform: "uppercase",
-  },
-  sectionTitle: {
-    marginTop: 5,
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 18,
-    letterSpacing: -0.5,
-  },
-  columnLabels: {
-    minHeight: 34,
-    flexDirection: "row",
-    alignItems: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingHorizontal: 8,
-  },
-  rankColumnLabel: {
-    width: 38,
-    color: colors.textMuted,
-    fontFamily: fonts.bold,
-    fontSize: 9,
-    letterSpacing: 0.7,
-    textTransform: "uppercase",
-  },
-  userColumnLabel: {
-    flex: 1,
-    color: colors.textMuted,
-    fontFamily: fonts.bold,
-    fontSize: 9,
-    letterSpacing: 0.7,
-    textTransform: "uppercase",
-  },
-  statColumnLabels: {
-    width: 112,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  columnLabel: {
-    color: colors.textMuted,
-    fontFamily: fonts.bold,
-    fontSize: 9,
-    letterSpacing: 0.7,
-    textAlign: "right",
-    textTransform: "uppercase",
-  },
-  list: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  row: {
-    minHeight: 64,
-    flexDirection: "row",
-    alignItems: "center",
-    borderLeftWidth: 3,
-    borderLeftColor: "transparent",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-  },
-  currentUserRow: {
-    borderLeftColor: colors.purple,
-    backgroundColor: "#f1edfb",
-  },
-  rank: {
-    width: 35,
-    color: colors.textSecondary,
-    fontFamily: fonts.bold,
-    fontSize: 12,
-    fontVariant: ["tabular-nums"],
-  },
-  user: {
-    minWidth: 0,
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
-  identity: {
-    minWidth: 0,
-    flexShrink: 1,
-    gap: 3,
-  },
-  displayName: {
-    color: colors.textPrimary,
-    fontFamily: fonts.semibold,
-    fontSize: 13,
-  },
-  username: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 11,
-  },
-  youLabel: {
-    borderRadius: radii.small,
-    backgroundColor: colors.purple,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    color: colors.surface,
-    fontFamily: fonts.bold,
-    fontSize: 8,
-    textTransform: "uppercase",
-  },
-  rowStats: {
-    width: 112,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  generalRowStats: {
-    width: 66,
-    justifyContent: "flex-end",
-  },
-  points: {
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 13,
-    fontVariant: ["tabular-nums"],
-    textAlign: "right",
-  },
-  pointsUnit: {
-    color: colors.textMuted,
     fontFamily: fonts.medium,
-    fontSize: 9,
+    fontSize: 11,
+    lineHeight: 17,
+    textAlign: "center",
   },
-  streak: {
-    color: colors.textSecondary,
-    fontFamily: fonts.semibold,
-    fontSize: 12,
-    fontVariant: ["tabular-nums"],
-    textAlign: "right",
+  rankingList: {
+    marginTop: 15,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   emptyState: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingVertical: 28,
+    alignItems: "center",
+    marginTop: 18,
+    borderRadius: radii.large,
+    backgroundColor: "#f0ebfc",
+    paddingHorizontal: 22,
+    paddingVertical: 40,
+  },
+  emptyInitial: {
+    width: 62,
+    height: 62,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 31,
+    backgroundColor: "#ded3f8",
+  },
+  emptyInitialText: {
+    color: colors.purple,
+    fontFamily: fonts.bold,
+    fontSize: 22,
   },
   emptyTitle: {
+    marginTop: 15,
     color: colors.textPrimary,
     fontFamily: fonts.semibold,
-    fontSize: 14,
+    fontSize: 15,
   },
   emptyCopy: {
     marginTop: 5,
@@ -472,13 +271,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 12,
     lineHeight: 18,
+    textAlign: "center",
   },
   note: {
-    marginTop: 16,
+    marginTop: 14,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 17,
     textAlign: "center",
   },
   loadingState: {
@@ -494,6 +294,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   errorState: {
+    marginTop: 24,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     paddingTop: 24,

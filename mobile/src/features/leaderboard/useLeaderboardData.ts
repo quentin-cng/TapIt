@@ -12,6 +12,8 @@ export type FriendsLeaderboardRow = {
   username: string;
   totalPoints: number;
   isCurrentUser: boolean;
+  currentGoal: number | null;
+  currentSessions: number;
   bestWeeklyGoalStreak: number;
 };
 
@@ -95,6 +97,8 @@ export function useLeaderboardData(
               username: stat.username,
               totalPoints: stat.totalPoints,
               isCurrentUser: stat.userId === userId,
+              currentGoal: stat.currentGoal,
+              currentSessions: stat.currentSessions,
               bestWeeklyGoalStreak: stat.bestWeeklyGoalStreak,
             }))
             .sort(
