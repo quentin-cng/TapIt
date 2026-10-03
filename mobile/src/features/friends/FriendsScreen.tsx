@@ -3,7 +3,6 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -11,32 +10,53 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
+import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
 import { resolveDisplayName } from "../../domain/profile-identity";
-import { colors, fonts, radii } from "../../theme/tokens";
+import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
 import { FriendActionButton } from "./FriendActionButton";
 import { FriendConsistencyRow } from "./FriendConsistencyRow";
+import { FriendDetailSheet } from "./FriendDetailSheet";
 import {
   type FriendActionResult,
   type FriendView,
   type IncomingRequestView,
+  type OutgoingRequestView,
   type SearchProfile,
   useFriendsData,
 } from "./useFriendsData";
 
-function Initial({ name }: { name: string }) {
+type FriendsTab = "friends" | "requests" | "sent";
+type ActionHandler = ReturnType<typeof useFriendsData>["performAction"];
+
+function IdentityLine({
+  displayName,
+  identityKey,
+  username,
+}: {
+  displayName: string;
+  identityKey: string;
+  username: string;
+}) {
   return (
-    <View accessibilityElementsHidden style={styles.initial}>
-      <Text style={styles.initialText}>
-        {Array.from(name.trim())[0]?.toLocaleUpperCase("en-CA") ?? "T"}
-      </Text>
+    <View style={styles.identityLine}>
+      <V3InitialAvatar
+        identityKey={identityKey}
+        name={displayName}
+        size="small"
+      />
+      <View style={styles.identityText}>
+        <Text numberOfLines={1} style={styles.identityName}>
+          {displayName}
+        </Text>
+        <Text numberOfLines={1} style={styles.username}>
+          @{username}
+        </Text>
+      </View>
     </View>
   );
 }
-
-type ActionHandler = ReturnType<typeof useFriendsData>["performAction"];
 
 function IncomingRequestRow({
   onAction,
@@ -53,18 +73,12 @@ function IncomingRequestRow({
   );
 
   return (
-    <View style={styles.requestRow}>
-      <View style={styles.identityLine}>
-        <Initial name={displayName} />
-        <View style={styles.identityText}>
-          <Text numberOfLines={1} style={styles.identityName}>
-            {displayName}
-          </Text>
-          <Text numberOfLines={1} style={styles.username}>
-            @{request.profile.username}
-          </Text>
-        </View>
-      </View>
+    <View style={styles.relationshipRow}>
+      <IdentityLine
+        displayName={displayName}
+        identityKey={request.profile.username}
+        username={request.profile.username}
+      />
       <View style={styles.requestActions}>
         <FriendActionButton
           entityId={request.id}
@@ -75,6 +89,40 @@ function IncomingRequestRow({
         <FriendActionButton
           entityId={request.id}
           mode="decline"
+          onAction={onAction}
+          onResult={onResult}
+        />
+      </View>
+    </View>
+  );
+}
+
+function OutgoingRequestRow({
+  onAction,
+  onResult,
+  request,
+}: {
+  onAction: ActionHandler;
+  onResult: (result: FriendActionResult) => void;
+  request: OutgoingRequestView;
+}) {
+  const displayName = resolveDisplayName(
+    request.profile.display_name,
+    request.profile.username,
+  );
+
+  return (
+    <View style={styles.relationshipRow}>
+      <IdentityLine
+        displayName={displayName}
+        identityKey={request.profile.username}
+        username={request.profile.username}
+      />
+      <View style={styles.sentAction}>
+        <Text style={styles.pendingLabel}>Pending</Text>
+        <FriendActionButton
+          entityId={request.id}
+          mode="cancel"
           onAction={onAction}
           onResult={onResult}
         />
@@ -96,17 +144,11 @@ function SearchResultRow({
 
   return (
     <View style={styles.searchResultRow}>
-      <View style={styles.identityLine}>
-        <Initial name={displayName} />
-        <View style={styles.identityText}>
-          <Text numberOfLines={1} style={styles.identityName}>
-            {displayName}
-          </Text>
-          <Text numberOfLines={1} style={styles.username}>
-            @{profile.username}
-          </Text>
-        </View>
-      </View>
+      <IdentityLine
+        displayName={displayName}
+        identityKey={profile.username}
+        username={profile.username}
+      />
 
       {profile.relationship_status === "friends" ? (
         <Text style={[styles.relationshipStatus, styles.friendsStatus]}>
@@ -125,7 +167,7 @@ function SearchResultRow({
           ) : null}
         </View>
       ) : profile.relationship_status === "incoming" ? (
-        <Text style={styles.relationshipStatus}>Respond below</Text>
+        <Text style={styles.relationshipStatus}>Incoming request</Text>
       ) : (
         <FriendActionButton
           entityId={profile.username}
@@ -138,16 +180,30 @@ function SearchResultRow({
   );
 }
 
+function EmptyState({ copy, title }: { copy: string; title: string }) {
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <MaterialCommunityIcons
+          color={v3Colors.purple}
+          name="account-multiple-outline"
+          size={25}
+        />
+      </View>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyCopy}>{copy}</Text>
+    </View>
+  );
+}
+
 export function FriendsScreen() {
   const { session } = useSession();
+  const [activeTab, setActiveTab] = useState<FriendsTab>("friends");
   const [searchInput, setSearchInput] = useState("");
   const [actionNotice, setActionNotice] = useState<FriendActionResult | null>(
     null,
   );
-  const [friendForRemoval, setFriendForRemoval] = useState<FriendView | null>(
-    null,
-  );
-  const [removalError, setRemovalError] = useState("");
+  const [selectedFriend, setSelectedFriend] = useState<FriendView | null>(null);
   const {
     data,
     error,
@@ -171,10 +227,10 @@ export function FriendsScreen() {
 
   const refreshControl = (
     <RefreshControl
-      colors={[colors.purple]}
+      colors={[v3Colors.purple]}
       onRefresh={() => void refresh()}
       refreshing={isRefreshing}
-      tintColor={colors.purple}
+      tintColor={v3Colors.purple}
     />
   );
 
@@ -191,23 +247,13 @@ export function FriendsScreen() {
     }
   }
 
-  function closeRemovalSheet() {
-    setFriendForRemoval(null);
-    setRemovalError("");
-  }
-
-  function openRemovalSheet(friend: FriendView) {
-    setRemovalError("");
-    setFriendForRemoval(friend);
-  }
-
   if (isLoading && !data) {
     return (
-      <AppScreen refreshControl={refreshControl}>
+      <AppScreen refreshControl={refreshControl} showTopbar={false} variant="v3">
         <View style={styles.loadingState}>
           <ActivityIndicator
             accessibilityLabel="Loading friends"
-            color={colors.purple}
+            color={v3Colors.purple}
             size="large"
           />
           <Text style={styles.loadingText}>Loading friends…</Text>
@@ -218,7 +264,7 @@ export function FriendsScreen() {
 
   if (!data) {
     return (
-      <AppScreen refreshControl={refreshControl}>
+      <AppScreen refreshControl={refreshControl} showTopbar={false} variant="v3">
         <View style={styles.errorState}>
           <Text accessibilityRole="header" style={styles.errorTitle}>
             Friends unavailable
@@ -227,7 +273,10 @@ export function FriendsScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={() => void loadFriends()}
-            style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed && styles.pressed,
+            ]}
           >
             <Text style={styles.retryButtonText}>Try again</Text>
           </Pressable>
@@ -236,63 +285,92 @@ export function FriendsScreen() {
     );
   }
 
-  const removalName = friendForRemoval
-    ? resolveDisplayName(
-        friendForRemoval.profile.display_name,
-        friendForRemoval.profile.username,
-      )
-    : "";
-
   return (
     <>
-      <AppScreen refreshControl={refreshControl}>
+      <AppScreen refreshControl={refreshControl} showTopbar={false} variant="v3">
         <Text accessibilityRole="header" style={styles.title}>
-          Friends
+          Friends.
         </Text>
 
-        <View style={styles.searchControls}>
-          <View style={styles.searchField}>
-            <MaterialCommunityIcons
-              color={colors.textMuted}
-              name="magnify"
-              size={20}
-            />
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isSearching}
-              maxLength={30}
-              onChangeText={handleSearchInput}
-              onSubmitEditing={submitSearch}
-              placeholder="Search friends…"
-              placeholderTextColor={colors.textMuted}
-              returnKeyType="search"
-              spellCheck={false}
-              style={styles.searchInput}
-              value={searchInput}
-            />
-          </View>
+        <View style={styles.searchField}>
+          <MaterialCommunityIcons
+            color={colors.textMuted}
+            name="magnify"
+            size={19}
+          />
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isSearching}
+            maxLength={30}
+            onChangeText={handleSearchInput}
+            onSubmitEditing={submitSearch}
+            placeholder="Search friends"
+            placeholderTextColor={colors.textMuted}
+            returnKeyType="search"
+            spellCheck={false}
+            style={styles.searchInput}
+            value={searchInput}
+          />
           <Pressable
             accessibilityLabel="Search friends"
             accessibilityRole="button"
             disabled={isSearching || !searchInput.trim()}
+            hitSlop={8}
             onPress={submitSearch}
             style={({ pressed }) => [
-              styles.searchButton,
+              styles.searchAction,
               (isSearching || !searchInput.trim()) && styles.disabled,
               pressed && styles.pressed,
             ]}
           >
             {isSearching ? (
-              <ActivityIndicator color={colors.surface} size="small" />
+              <ActivityIndicator color={v3Colors.purple} size="small" />
             ) : (
               <MaterialCommunityIcons
-                color={colors.surface}
+                color={v3Colors.purple}
                 name="arrow-right"
                 size={20}
               />
             )}
           </Pressable>
+        </View>
+
+        <View style={styles.tabs}>
+          {(
+            [
+              ["friends", "Friends"],
+              ["requests", "Requests"],
+              ["sent", "Sent"],
+            ] as const
+          ).map(([tab, label]) => {
+            const isActive = activeTab === tab;
+
+            return (
+              <Pressable
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={({ pressed }) => [
+                  styles.tab,
+                  isActive && styles.activeTab,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={[styles.tabLabel, isActive && styles.activeTabLabel]}>
+                  {label}
+                </Text>
+                {tab === "requests" && data.incomingRequests.length > 0 ? (
+                  <View style={styles.requestBadge}>
+                    <Text style={styles.requestBadgeText}>
+                      {data.incomingRequests.length}
+                    </Text>
+                  </View>
+                ) : null}
+              </Pressable>
+            );
+          })}
         </View>
 
         {searchError ? (
@@ -301,13 +379,16 @@ export function FriendsScreen() {
           </Text>
         ) : searchedQuery && !isSearching && searchProfiles.length === 0 ? (
           <View style={styles.searchEmpty}>
-            <Text style={styles.emptyTitle}>No matching users</Text>
-            <Text style={styles.emptyCopy}>Check the username and try again.</Text>
+            <Text style={styles.searchEmptyTitle}>No matching users</Text>
+            <Text style={styles.searchEmptyCopy}>
+              Check the username and try again.
+            </Text>
           </View>
         ) : null}
 
-        {searchProfiles.length ? (
+        {searchProfiles.length > 0 ? (
           <View style={styles.searchResults}>
+            <Text style={styles.resultsLabel}>Search results</Text>
             {searchProfiles.map((profile) => (
               <SearchResultRow
                 key={profile.username}
@@ -339,51 +420,46 @@ export function FriendsScreen() {
           </Text>
         ) : null}
 
-        <View style={styles.friendsSection}>
-          <Text style={styles.sectionLabel}>
-            {data.friends.length} {data.friends.length === 1 ? "friend" : "friends"}
-          </Text>
-
-          {data.friends.length ? (
-            <View style={styles.friendList}>
-              {data.friends.map((friend) => (
-                <FriendConsistencyRow
-                  friend={friend}
-                  key={friend.profile.profile_id}
-                  onOpenActions={openRemovalSheet}
-                />
-              ))}
-            </View>
-          ) : (
-            <View style={styles.emptyFriends}>
-              <View style={styles.emptyIcon}>
-                <MaterialCommunityIcons
-                  color={colors.purple}
-                  name="account-multiple-outline"
-                  size={25}
-                />
+        <View style={styles.tabContent}>
+          {activeTab === "friends" ? (
+            data.friends.length > 0 ? (
+              <View style={styles.friendGrid}>
+                {data.friends.map((friend) => (
+                  <FriendConsistencyRow
+                    friend={friend}
+                    key={friend.profile.profile_id}
+                    onOpen={setSelectedFriend}
+                  />
+                ))}
               </View>
-              <Text style={styles.emptyTitle}>No friends yet</Text>
-              <Text style={styles.emptyCopy}>
-                Search for another TapIt member to send a friend request.
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {data.incomingRequests.length ? (
-          <View style={styles.requestsSection}>
-            <View style={styles.requestHeading}>
-              <Text style={styles.sectionLabel}>Friend requests</Text>
-              <View style={styles.requestCount}>
-                <Text style={styles.requestCountText}>
-                  {data.incomingRequests.length}
-                </Text>
+            ) : (
+              <EmptyState
+                copy="Search for another TapIt member to send a friend request."
+                title="No friends yet"
+              />
+            )
+          ) : activeTab === "requests" ? (
+            data.incomingRequests.length > 0 ? (
+              <View style={styles.relationshipList}>
+                {data.incomingRequests.map((request) => (
+                  <IncomingRequestRow
+                    key={request.id}
+                    onAction={performAction}
+                    onResult={setActionNotice}
+                    request={request}
+                  />
+                ))}
               </View>
-            </View>
-            <View style={styles.requestList}>
-              {data.incomingRequests.map((request) => (
-                <IncomingRequestRow
+            ) : (
+              <EmptyState
+                copy="New friend requests will appear here."
+                title="No requests"
+              />
+            )
+          ) : data.outgoingRequests.length > 0 ? (
+            <View style={styles.relationshipList}>
+              {data.outgoingRequests.map((request) => (
+                <OutgoingRequestRow
                   key={request.id}
                   onAction={performAction}
                   onResult={setActionNotice}
@@ -391,59 +467,24 @@ export function FriendsScreen() {
                 />
               ))}
             </View>
-          </View>
-        ) : null}
+          ) : (
+            <EmptyState
+              copy="Friend requests you send will appear here until they respond."
+              title="No sent requests"
+            />
+          )}
+        </View>
       </AppScreen>
 
-      <Modal
-        animationType="slide"
-        onRequestClose={closeRemovalSheet}
-        statusBarTranslucent
-        transparent
-        visible={friendForRemoval !== null}
-      >
-        <View style={styles.modalBackdrop}>
-          <SafeAreaView edges={["bottom"]} style={styles.modalSafeArea}>
-            <View style={styles.actionSheet}>
-              <View style={styles.actionSheetHandle} />
-              <Text style={styles.actionSheetTitle}>{removalName}</Text>
-              <Text style={styles.actionSheetCopy}>
-                Remove this person from your TapIt friends?
-              </Text>
-              {friendForRemoval ? (
-                <FriendActionButton
-                  entityId={friendForRemoval.profile.profile_id}
-                  mode="remove"
-                  onAction={performAction}
-                  onResult={(result) => {
-                    if (result.status === "success") {
-                      setActionNotice(result);
-                      closeRemovalSheet();
-                    } else {
-                      setRemovalError(result.message);
-                    }
-                  }}
-                />
-              ) : null}
-              {removalError ? (
-                <Text accessibilityRole="alert" style={styles.removalError}>
-                  {removalError}
-                </Text>
-              ) : null}
-              <Pressable
-                accessibilityRole="button"
-                onPress={closeRemovalSheet}
-                style={({ pressed }) => [
-                  styles.cancelButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
+      <FriendDetailSheet
+        friend={selectedFriend}
+        onAction={performAction}
+        onClose={() => setSelectedFriend(null)}
+        onRemoved={(result) => {
+          setActionNotice(result);
+          setSelectedFriend(null);
+        }}
+      />
     </>
   );
 }
@@ -451,81 +492,137 @@ export function FriendsScreen() {
 const styles = StyleSheet.create({
   title: {
     marginBottom: 17,
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 34,
-    letterSpacing: -1.8,
-    lineHeight: 38,
-  },
-  searchControls: {
-    flexDirection: "row",
-    gap: 8,
+    color: v3Colors.ink,
+    fontFamily: fonts.extraBold,
+    fontSize: 38,
+    letterSpacing: -2.1,
+    lineHeight: 42,
   },
   searchField: {
-    minHeight: 46,
-    flex: 1,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     gap: 9,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 23,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 14,
+    borderRadius: 22,
+    backgroundColor: "#f0edf4",
+    paddingLeft: 14,
+    paddingRight: 8,
   },
   searchInput: {
     minWidth: 0,
     flex: 1,
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.regular,
-    fontSize: 14,
+    fontSize: 13,
     paddingVertical: 0,
   },
-  searchButton: {
-    width: 46,
-    height: 46,
+  searchAction: {
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 23,
-    backgroundColor: colors.purple,
+    borderRadius: 16,
+  },
+  tabs: {
+    marginTop: 16,
+    flexDirection: "row",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  tab: {
+    minHeight: 42,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  activeTab: {
+    borderBottomColor: v3Colors.purple,
+  },
+  tabLabel: {
+    color: colors.textSecondary,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+  },
+  activeTabLabel: {
+    color: v3Colors.purple,
+  },
+  requestBadge: {
+    minWidth: 17,
+    height: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 9,
+    backgroundColor: "#ef4055",
+    paddingHorizontal: 4,
+  },
+  requestBadgeText: {
+    color: colors.surface,
+    fontFamily: fonts.bold,
+    fontSize: 9,
   },
   fieldError: {
-    marginTop: 9,
+    marginTop: 10,
     color: colors.danger,
     fontFamily: fonts.regular,
     fontSize: 11,
   },
+  searchEmpty: {
+    marginTop: 14,
+    borderRadius: radii.medium,
+    backgroundColor: v3Colors.lavender,
+    padding: 14,
+  },
+  searchEmptyTitle: {
+    color: v3Colors.ink,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+  },
+  searchEmptyCopy: {
+    marginTop: 3,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 11,
+  },
   searchResults: {
-    marginTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    marginTop: 15,
+    borderRadius: radii.large,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 13,
+    paddingTop: 12,
+  },
+  resultsLabel: {
+    color: colors.textMuted,
+    fontFamily: fonts.bold,
+    fontSize: 9,
+    letterSpacing: 0.9,
+    textTransform: "uppercase",
   },
   searchResultRow: {
-    minHeight: 66,
+    minHeight: 64,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
-    paddingVertical: 11,
+    paddingVertical: 10,
   },
   searchActionState: {
     alignItems: "flex-end",
   },
   relationshipStatus: {
+    maxWidth: 92,
     color: colors.textSecondary,
     fontFamily: fonts.semibold,
-    fontSize: 11,
+    fontSize: 10,
+    textAlign: "right",
   },
   friendsStatus: {
     color: colors.success,
-  },
-  searchEmpty: {
-    marginTop: 12,
-    borderRadius: radii.medium,
-    backgroundColor: colors.surfaceElevated,
-    padding: 15,
   },
   inlineError: {
     marginTop: 13,
@@ -546,20 +643,13 @@ const styles = StyleSheet.create({
   noticeSuccess: {
     color: colors.success,
   },
-  friendsSection: {
-    marginTop: 26,
+  tabContent: {
+    marginTop: 16,
   },
-  sectionLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.bold,
-    fontSize: 10,
-    letterSpacing: 1.05,
-    textTransform: "uppercase",
-  },
-  friendList: {
-    marginTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+  friendGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 11,
   },
   identityLine: {
     minWidth: 0,
@@ -568,42 +658,53 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  initial: {
-    width: 38,
-    height: 38,
-    flexShrink: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 19,
-    backgroundColor: "#e9e3f7",
-  },
-  initialText: {
-    color: colors.purpleDark,
-    fontFamily: fonts.bold,
-    fontSize: 13,
-  },
   identityText: {
     minWidth: 0,
     flex: 1,
     gap: 2,
   },
   identityName: {
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.semibold,
-    fontSize: 14,
+    fontSize: 13,
   },
   username: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 11,
+    fontSize: 10,
   },
-  emptyFriends: {
+  relationshipList: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  relationshipRow: {
+    minHeight: 78,
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    gap: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    paddingVertical: 12,
+  },
+  requestActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  sentAction: {
+    alignItems: "flex-end",
+  },
+  pendingLabel: {
+    color: colors.textSecondary,
+    fontFamily: fonts.medium,
+    fontSize: 10,
+  },
+  emptyState: {
+    alignItems: "center",
     borderRadius: radii.large,
-    backgroundColor: "#f0ebfc",
+    backgroundColor: v3Colors.lavender,
     paddingHorizontal: 22,
-    paddingVertical: 27,
+    paddingVertical: 30,
   },
   emptyIcon: {
     width: 48,
@@ -611,115 +712,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 24,
-    backgroundColor: "#ded3f8",
+    backgroundColor: v3Colors.lavenderStrong,
   },
   emptyTitle: {
     marginTop: 11,
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.semibold,
     fontSize: 14,
   },
   emptyCopy: {
+    maxWidth: 260,
     marginTop: 4,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 11,
     lineHeight: 17,
     textAlign: "center",
-  },
-  requestsSection: {
-    marginTop: 30,
-  },
-  requestHeading: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  requestCount: {
-    minWidth: 23,
-    height: 23,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 12,
-    backgroundColor: "#e5dcfa",
-    paddingHorizontal: 6,
-  },
-  requestCountText: {
-    color: colors.purpleDark,
-    fontFamily: fonts.bold,
-    fontSize: 10,
-  },
-  requestList: {
-    marginTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  requestRow: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingVertical: 13,
-  },
-  requestActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 9,
-    marginTop: 8,
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(17, 17, 19, 0.42)",
-  },
-  modalSafeArea: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: colors.background,
-  },
-  actionSheet: {
-    alignItems: "stretch",
-    paddingHorizontal: 22,
-    paddingTop: 10,
-    paddingBottom: 24,
-  },
-  actionSheetHandle: {
-    width: 38,
-    height: 4,
-    alignSelf: "center",
-    borderRadius: 2,
-    backgroundColor: colors.borderStrong,
-  },
-  actionSheetTitle: {
-    marginTop: 20,
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 21,
-    letterSpacing: -0.6,
-  },
-  actionSheetCopy: {
-    marginTop: 6,
-    marginBottom: 10,
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  removalError: {
-    marginTop: 8,
-    color: colors.danger,
-    fontFamily: fonts.regular,
-    fontSize: 11,
-    lineHeight: 17,
-  },
-  cancelButton: {
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  cancelButtonText: {
-    color: colors.textSecondary,
-    fontFamily: fonts.semibold,
-    fontSize: 13,
   },
   loadingState: {
     flex: 1,
@@ -734,12 +742,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   errorState: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
     paddingTop: 24,
   },
   errorTitle: {
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.bold,
     fontSize: 28,
     letterSpacing: -1.2,
@@ -755,7 +761,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 20,
     borderRadius: radii.small,
-    backgroundColor: colors.purple,
+    backgroundColor: v3Colors.purple,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
@@ -764,10 +770,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     fontSize: 14,
   },
-  pressed: {
-    opacity: 0.72,
-  },
   disabled: {
-    opacity: 0.42,
+    opacity: 0.4,
+  },
+  pressed: {
+    opacity: 0.68,
   },
 });

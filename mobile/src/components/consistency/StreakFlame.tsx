@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, fonts } from "../../theme/tokens";
+import { colors, fonts, v3Colors } from "../../theme/tokens";
 
 type FlameTier = {
   color: string;
@@ -20,13 +20,37 @@ export function StreakFlame({
   message,
   streak,
   tone = "light",
+  variant = "default",
 }: {
   message: string;
   streak: number;
   tone?: "dark" | "light";
+  variant?: "default" | "v3";
 }) {
   const tier = getFlameTier(streak);
   const isDark = tone === "dark";
+
+  if (variant === "v3") {
+    return (
+      <View
+        accessible
+        accessibilityLabel={`${streak} week streak. ${message}`}
+        style={styles.v3Container}
+      >
+        <View style={styles.v3FlameSurface}>
+          <MaterialCommunityIcons
+            color={v3Colors.flame}
+            name="fire"
+            size={39}
+          />
+        </View>
+        <View style={styles.v3Copy}>
+          <Text style={styles.v3Title}>{streak} week streak</Text>
+          <Text style={styles.v3Message}>{message}</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -95,5 +119,35 @@ const styles = StyleSheet.create({
   },
   darkSecondary: {
     color: "#aaa6b2",
+  },
+  v3Container: {
+    minHeight: 76,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 13,
+  },
+  v3FlameSurface: {
+    width: 49,
+    height: 49,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    backgroundColor: v3Colors.flameSurface,
+  },
+  v3Copy: {
+    minWidth: 0,
+    flex: 1,
+    gap: 4,
+  },
+  v3Title: {
+    color: v3Colors.ink,
+    fontFamily: fonts.bold,
+    fontSize: 17,
+    letterSpacing: -0.4,
+  },
+  v3Message: {
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 13,
   },
 });

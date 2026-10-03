@@ -41,10 +41,16 @@ export type IncomingRequestView = {
   profile: RelationshipProfile;
 };
 
+export type OutgoingRequestView = {
+  id: string;
+  profile: RelationshipProfile;
+};
+
 export type FriendsData = {
   friends: FriendView[];
   hasDataError: boolean;
   incomingRequests: IncomingRequestView[];
+  outgoingRequests: OutgoingRequestView[];
 };
 
 export type FriendActionMode =
@@ -164,6 +170,12 @@ export function useFriendsData(userId: string) {
           .filter((request) => request.recipient_id === userId)
           .flatMap((request) => {
             const profile = relationshipProfilesById.get(request.requester_id);
+            return profile ? [{ id: request.id, profile }] : [];
+          }),
+        outgoingRequests: requestRows
+          .filter((request) => request.requester_id === userId)
+          .flatMap((request) => {
+            const profile = relationshipProfilesById.get(request.recipient_id);
             return profile ? [{ id: request.id, profile }] : [];
           }),
       });

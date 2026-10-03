@@ -2,31 +2,42 @@ import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import type { RefreshControlProps } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fonts, v3Colors } from "../theme/tokens";
 
 type AppScreenProps = {
   children: ReactNode;
   refreshControl?: React.ReactElement<RefreshControlProps>;
+  showTopbar?: boolean;
   topbarAccessory?: ReactNode;
+  variant?: "default" | "v3";
 };
 
 export function AppScreen({
   children,
   refreshControl,
+  showTopbar = true,
   topbarAccessory,
+  variant = "default",
 }: AppScreenProps) {
+  const isV3 = variant === "v3";
+
   return (
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
-      <View style={styles.topbar}>
-        <Text accessibilityRole="header" style={styles.wordmark}>
-          Tap<Text style={styles.wordmarkAccent}>It</Text>
-        </Text>
-        {topbarAccessory ? (
-          <View style={styles.topbarAccessory}>{topbarAccessory}</View>
-        ) : null}
-      </View>
+      {showTopbar ? (
+        <View style={[styles.topbar, isV3 && styles.v3Topbar]}>
+          <Text
+            accessibilityRole="header"
+            style={[styles.wordmark, isV3 && styles.v3Wordmark]}
+          >
+            Tap<Text style={styles.wordmarkAccent}>It</Text>
+          </Text>
+          {topbarAccessory ? (
+            <View style={styles.topbarAccessory}>{topbarAccessory}</View>
+          ) : null}
+        </View>
+      ) : null}
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, isV3 && styles.v3Content]}
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
@@ -54,6 +65,12 @@ const styles = StyleSheet.create({
   topbarAccessory: {
     marginLeft: 16,
   },
+  v3Topbar: {
+    minHeight: 64,
+    borderBottomWidth: 0,
+    marginHorizontal: 20,
+    paddingTop: 8,
+  },
   wordmark: {
     color: colors.textPrimary,
     fontFamily: fonts.extraBold,
@@ -63,10 +80,19 @@ const styles = StyleSheet.create({
   wordmarkAccent: {
     color: colors.purple,
   },
+  v3Wordmark: {
+    color: v3Colors.ink,
+    fontSize: 23,
+  },
   content: {
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 48,
+  },
+  v3Content: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 64,
   },
 });

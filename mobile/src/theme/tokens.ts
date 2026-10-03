@@ -13,6 +13,17 @@ export const colors = {
   danger: "#bd3447",
 } as const;
 
+export const v3Colors = {
+  ink: "#24143f",
+  purple: "#6f3ff5",
+  purpleDark: "#4f24c7",
+  lavender: "#f0ebfb",
+  lavenderStrong: "#ded3f8",
+  progressTrack: "#e7e1f2",
+  flame: "#ff7b3d",
+  flameSurface: "#fff0df",
+} as const;
+
 export const fonts = {
   regular: "Inter_400Regular",
   medium: "Inter_500Medium",

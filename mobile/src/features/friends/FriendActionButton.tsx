@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
-import { colors, fonts, radii } from "../../theme/tokens";
+import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
 import type {
   FriendActionMode,
   FriendActionResult,
@@ -22,6 +22,7 @@ type FriendActionButtonProps = {
     entityId: string,
   ) => Promise<FriendActionResult>;
   onResult: (result: FriendActionResult) => void;
+  presentation?: "default" | "sheet";
 };
 
 export function FriendActionButton({
@@ -29,6 +30,7 @@ export function FriendActionButton({
   mode,
   onAction,
   onResult,
+  presentation = "default",
 }: FriendActionButtonProps) {
   const [isPending, setIsPending] = useState(false);
   const isPrimary = mode === "send" || mode === "accept";
@@ -49,17 +51,34 @@ export function FriendActionButton({
       disabled={isPending}
       onPress={() => void handlePress()}
       style={({ pressed }) => [
-        isPrimary ? styles.primaryButton : styles.textButton,
+        presentation === "sheet"
+          ? styles.sheetButton
+          : isPrimary
+            ? styles.primaryButton
+            : styles.textButton,
         pressed && styles.pressed,
         isPending && styles.disabled,
       ]}
     >
       {isPending ? (
-        <ActivityIndicator color={isPrimary ? colors.surface : colors.textSecondary} size="small" />
+        <ActivityIndicator
+          color={
+            presentation === "sheet"
+              ? colors.danger
+              : isPrimary
+                ? colors.surface
+                : colors.textSecondary
+          }
+          size="small"
+        />
       ) : (
         <Text
           style={[
-            isPrimary ? styles.primaryLabel : styles.textLabel,
+            presentation === "sheet"
+              ? styles.sheetLabel
+              : isPrimary
+                ? styles.primaryLabel
+                : styles.textLabel,
             isDestructive && styles.destructiveLabel,
           ]}
         >
@@ -76,7 +95,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radii.small,
-    backgroundColor: colors.purple,
+    backgroundColor: v3Colors.purple,
     paddingHorizontal: 12,
   },
   primaryLabel: {
@@ -99,6 +118,21 @@ const styles = StyleSheet.create({
   destructiveLabel: {
     color: colors.danger,
     textDecorationLine: "none",
+  },
+  sheetButton: {
+    minHeight: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.medium,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+  },
+  sheetLabel: {
+    color: colors.danger,
+    fontFamily: fonts.semibold,
+    fontSize: 14,
   },
   pressed: {
     opacity: 0.7,

@@ -1,173 +1,148 @@
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SessionDots } from "../../components/consistency/SessionDots";
+import {
+  getV3AvatarPalette,
+  V3InitialAvatar,
+} from "../../components/identity/V3InitialAvatar";
 import { resolveDisplayName } from "../../domain/profile-identity";
-import { colors, fonts } from "../../theme/tokens";
+import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
 import type { FriendView } from "./useFriendsData";
+
+const completedColor = "#16845a";
 
 export function FriendConsistencyRow({
   friend,
-  onOpenActions,
+  onOpen,
 }: {
   friend: FriendView;
-  onOpenActions: (friend: FriendView) => void;
+  onOpen: (friend: FriendView) => void;
 }) {
   const displayName = resolveDisplayName(
     friend.profile.display_name,
     friend.profile.username,
   );
+  const palette = getV3AvatarPalette(friend.profile.username);
   const stat = friend.weeklyStat;
-  const streak = stat?.currentWeeklyGoalStreak ?? 0;
+  const isComplete = Boolean(
+    stat?.currentGoal && stat.currentSessions >= stat.currentGoal,
+  );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.heading}>
-        <View style={styles.identity}>
-          <View style={styles.initial}>
-            <Text style={styles.initialText}>
-              {Array.from(displayName.trim())[0]?.toLocaleUpperCase("en-CA") ?? "T"}
+    <Pressable
+      accessibilityHint="Opens friend details"
+      accessibilityLabel={`${displayName}, @${friend.profile.username}`}
+      accessibilityRole="button"
+      onPress={() => onOpen(friend)}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: palette.surface },
+        pressed && styles.pressed,
+      ]}
+    >
+      <V3InitialAvatar
+        identityKey={friend.profile.username}
+        name={displayName}
+      />
+      <Text numberOfLines={1} style={styles.name}>
+        {displayName}
+      </Text>
+      <Text numberOfLines={1} style={styles.username}>
+        @{friend.profile.username}
+      </Text>
+
+      <View style={styles.progressBlock}>
+        {!stat ? (
+          <Text style={styles.unavailable}>Progress unavailable</Text>
+        ) : stat.currentGoal ? (
+          <>
+            <Text
+              style={[
+                styles.progressText,
+                isComplete && styles.completeText,
+              ]}
+            >
+              {stat.currentSessions} / {stat.currentGoal}
             </Text>
-          </View>
-          <View style={styles.identityCopy}>
-            <Text numberOfLines={1} style={styles.name}>
-              {displayName}
+            <SessionDots
+              accentColor={isComplete ? completedColor : v3Colors.purple}
+              compact
+              completed={stat.currentSessions}
+              target={stat.currentGoal}
+              variant="v3"
+            />
+            <Text
+              style={[
+                styles.statusText,
+                isComplete && styles.completeText,
+              ]}
+            >
+              {isComplete ? "Goal complete" : "In progress"}
             </Text>
-            <Text numberOfLines={1} style={styles.username}>
-              @{friend.profile.username}
-            </Text>
-          </View>
-        </View>
-        <Pressable
-          accessibilityLabel={`More actions for ${displayName}`}
-          accessibilityRole="button"
-          hitSlop={10}
-          onPress={() => onOpenActions(friend)}
-          style={({ pressed }) => [styles.moreButton, pressed && styles.pressed]}
-        >
-          <MaterialCommunityIcons
-            color={colors.textSecondary}
-            name="dots-horizontal"
-            size={21}
-          />
-        </Pressable>
+          </>
+        ) : (
+          <Text style={styles.unavailable}>No weekly goal</Text>
+        )}
       </View>
-
-      {!stat ? (
-        <Text style={styles.unavailable}>Weekly progress unavailable</Text>
-      ) : stat.currentGoal ? (
-        <View style={styles.consistencyLine}>
-          <SessionDots
-            compact
-            completed={stat.currentSessions}
-            target={stat.currentGoal}
-          />
-          <Text style={styles.progressText}>
-            {stat.currentSessions} / {stat.currentGoal}
-          </Text>
-        </View>
-      ) : (
-        <Text style={styles.noGoal}>No weekly goal</Text>
-      )}
-
-      {stat ? (
-        <Text style={styles.streakText}>
-          {streak > 0
-            ? `${streak} ${streak === 1 ? "week" : "weeks"} streak`
-            : "No active streak"}
-        </Text>
-      ) : null}
-    </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingVertical: 15,
-  },
-  heading: {
-    flexDirection: "row",
+  card: {
+    width: "48%",
+    minHeight: 190,
     alignItems: "center",
-    gap: 12,
-  },
-  identity: {
-    minWidth: 0,
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 11,
-  },
-  initial: {
-    width: 42,
-    height: 42,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 21,
-    backgroundColor: "#e5dcfa",
-  },
-  initialText: {
-    color: colors.purpleDark,
-    fontFamily: fonts.bold,
-    fontSize: 15,
-  },
-  identityCopy: {
-    minWidth: 0,
-    flex: 1,
-    gap: 2,
+    borderRadius: radii.large,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
   },
   name: {
-    color: colors.textPrimary,
-    fontFamily: fonts.semibold,
-    fontSize: 15,
+    width: "100%",
+    marginTop: 10,
+    color: v3Colors.ink,
+    fontFamily: fonts.bold,
+    fontSize: 13,
+    letterSpacing: -0.2,
+    textAlign: "center",
   },
   username: {
+    width: "100%",
+    marginTop: 2,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 11,
+    fontSize: 10,
+    textAlign: "center",
   },
-  moreButton: {
-    width: 36,
-    height: 36,
+  progressBlock: {
+    width: "100%",
+    minHeight: 54,
+    marginTop: 11,
     alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 18,
-  },
-  consistencyLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-    marginTop: 13,
-    marginLeft: 53,
+    justifyContent: "flex-end",
+    gap: 6,
   },
   progressText: {
-    color: colors.textPrimary,
-    fontFamily: fonts.semibold,
+    color: v3Colors.ink,
+    fontFamily: fonts.bold,
     fontSize: 12,
     fontVariant: ["tabular-nums"],
   },
-  noGoal: {
-    marginTop: 12,
-    marginLeft: 53,
+  statusText: {
     color: colors.textSecondary,
     fontFamily: fonts.medium,
-    fontSize: 12,
+    fontSize: 9,
+  },
+  completeText: {
+    color: completedColor,
   },
   unavailable: {
-    marginTop: 12,
-    marginLeft: 53,
     color: colors.textMuted,
-    fontFamily: fonts.regular,
-    fontSize: 11,
-  },
-  streakText: {
-    marginTop: 7,
-    marginLeft: 53,
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 11,
+    fontFamily: fonts.medium,
+    fontSize: 10,
+    textAlign: "center",
   },
   pressed: {
-    opacity: 0.55,
+    opacity: 0.72,
+    transform: [{ scale: 0.985 }],
   },
 });
