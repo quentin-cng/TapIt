@@ -14,6 +14,14 @@ export function isValidDisplayName(value: string) {
   );
 }
 
+export function normalizeUsername(value: string) {
+  return value.trim().toLowerCase();
+}
+
+export function isValidUsername(value: string) {
+  return /^[a-z0-9_]{3,30}$/.test(normalizeUsername(value));
+}
+
 export function resolveDisplayName(
   displayName: string | null | undefined,
   username: string,

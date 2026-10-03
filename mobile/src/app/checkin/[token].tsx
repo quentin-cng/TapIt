@@ -13,6 +13,7 @@ import { useSession } from "../../auth/SessionProvider";
 import { isValidCheckinToken } from "../../checkin/checkin-contract";
 import { CheckinScreen } from "../../checkin/CheckinScreen";
 import { usePendingCheckin } from "../../checkin/PendingCheckinProvider";
+import { useOnboarding } from "../../onboarding/OnboardingProvider";
 import { fonts } from "../../theme/tokens";
 
 export default function PublicCheckinRoute() {
@@ -20,6 +21,11 @@ export default function PublicCheckinRoute() {
     token?: string | string[];
   }>();
   const { isRestoring, session } = useSession();
+  const {
+    isComplete: isOnboardingComplete,
+    isHydrating: isOnboardingHydrating,
+    readiness,
+  } = useOnboarding();
   const {
     acknowledgePendingToken,
     isHydrating,
@@ -29,7 +35,7 @@ export default function PublicCheckinRoute() {
   const [persistenceError, setPersistenceError] = useState("");
   const [retryKey, setRetryKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
-  const loggedOutHandoffToken = useRef<string | null>(null);
+  const deferredHandoffKey = useRef<string | null>(null);
   const acknowledgementKey = useRef<string | null>(null);
   const token =
     typeof routeToken === "string" && isValidCheckinToken(routeToken)
@@ -37,12 +43,27 @@ export default function PublicCheckinRoute() {
       : null;
 
   useEffect(() => {
-    if (!token || isRestoring || isHydrating || session) return;
+    if (
+      !token ||
+      isRestoring ||
+      isHydrating ||
+      isOnboardingHydrating ||
+      (session && isOnboardingComplete) ||
+      readiness === "error"
+    ) {
+      return;
+    }
 
     let isActive = true;
-    if (loggedOutHandoffToken.current === token) return;
+    const destination = session
+      ? readiness === "identity-incomplete"
+        ? "/onboarding/profile"
+        : "/onboarding/weekly-goal"
+      : "/sign-in";
+    const handoffKey = `${destination}:${token}`;
+    if (deferredHandoffKey.current === handoffKey) return;
 
-    loggedOutHandoffToken.current = token;
+    deferredHandoffKey.current = handoffKey;
     setPersistenceError("");
     setIsSaving(true);
 
@@ -51,11 +72,11 @@ export default function PublicCheckinRoute() {
 
       setIsSaving(false);
       if (saved) {
-        router.replace("/sign-in");
+        router.replace(destination);
       } else {
-        loggedOutHandoffToken.current = null;
+        deferredHandoffKey.current = null;
         setPersistenceError(
-          "This check-in could not be saved for sign in. Please try again.",
+          "This check-in could not be saved for later. Please try again.",
         );
       }
     });
@@ -65,8 +86,11 @@ export default function PublicCheckinRoute() {
     };
   }, [
     isHydrating,
+    isOnboardingComplete,
+    isOnboardingHydrating,
     isRestoring,
     persistPendingToken,
+    readiness,
     retryKey,
     session,
     token,
@@ -77,7 +101,9 @@ export default function PublicCheckinRoute() {
       !token ||
       isRestoring ||
       isHydrating ||
+      isOnboardingHydrating ||
       !session ||
+      !isOnboardingComplete ||
       !pendingToken
     ) {
       return;
@@ -106,6 +132,8 @@ export default function PublicCheckinRoute() {
   }, [
     acknowledgePendingToken,
     isHydrating,
+    isOnboardingComplete,
+    isOnboardingHydrating,
     isRestoring,
     pendingToken,
     persistPendingToken,
@@ -116,7 +144,10 @@ export default function PublicCheckinRoute() {
   if (
     isRestoring ||
     isHydrating ||
-    (token && !session && (isSaving || !persistenceError))
+    isOnboardingHydrating ||
+    (token &&
+      (!session || !isOnboardingComplete) &&
+      (isSaving || !persistenceError))
   ) {
     return (
       <RouteState
@@ -138,7 +169,7 @@ export default function PublicCheckinRoute() {
     );
   }
 
-  if (!session) {
+  if (!session || !isOnboardingComplete) {
     return (
       <RouteState
         actionLabel="Try again"
@@ -147,12 +178,12 @@ export default function PublicCheckinRoute() {
           "Sign in is required before you can continue this check-in."
         }
         onAction={() => {
-          loggedOutHandoffToken.current = null;
+          deferredHandoffKey.current = null;
           setPersistenceError("");
           setIsSaving(true);
           setRetryKey((value) => value + 1);
         }}
-        title="We couldn’t continue to sign in."
+        title="We couldn’t continue your check-in."
       />
     );
   }

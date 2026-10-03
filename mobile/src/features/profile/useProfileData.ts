@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   isValidDisplayName,
+  isValidUsername,
   normalizeDisplayName,
+  normalizeUsername,
 } from "../../domain/profile-identity";
 import { addCalendarDays, getMontrealWeekStart } from "../../domain/montreal-calendar";
 import {
@@ -62,8 +64,6 @@ export type IdentityMutationResult = ProfileMutationResult & {
 export type PrivacyMutationResult = ProfileMutationResult & {
   value: boolean;
 };
-
-const usernamePattern = /^[a-z0-9_]{3,30}$/;
 
 function formatEffectiveWeek(dateKey: string) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -215,7 +215,7 @@ export function useProfileData(userId: string) {
       rawUsername: string,
     ): Promise<IdentityMutationResult> => {
       const displayName = normalizeDisplayName(rawDisplayName);
-      const username = rawUsername.trim().toLowerCase();
+      const username = normalizeUsername(rawUsername);
       const values = { displayName, username };
 
       if (!isValidDisplayName(displayName)) {
@@ -226,7 +226,7 @@ export function useProfileData(userId: string) {
         };
       }
 
-      if (!usernamePattern.test(username)) {
+      if (!isValidUsername(username)) {
         return {
           status: "error",
           message:

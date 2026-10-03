@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -32,9 +33,12 @@ export default function SignInScreen() {
     });
 
     if (error) {
+      const normalizedMessage = error.message.toLowerCase();
       setAuthError(
-        error.message.toLowerCase().includes("invalid login credentials")
+        normalizedMessage.includes("invalid login credentials")
           ? "Email or password is incorrect."
+          : normalizedMessage.includes("email not confirmed")
+            ? "Confirm your email before logging in."
           : "We could not log you in. Please try again.",
       );
     } else {
@@ -121,6 +125,18 @@ export default function SignInScreen() {
                 <Text style={styles.buttonText}>Log in</Text>
               )}
             </Pressable>
+
+            <View style={styles.switchRow}>
+              <Text style={styles.switchCopy}>New to TapIt?</Text>
+              <Pressable
+                accessibilityRole="link"
+                disabled={isSigningIn}
+                onPress={() => router.push("/sign-up")}
+                style={({ pressed }) => pressed && styles.pressed}
+              >
+                <Text style={styles.switchLink}>Create account</Text>
+              </Pressable>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -214,6 +230,22 @@ const styles = StyleSheet.create({
     color: colors.surface,
     fontFamily: fonts.bold,
     fontSize: 15,
+  },
+  switchRow: {
+    marginTop: 24,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 5,
+  },
+  switchCopy: {
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+  },
+  switchLink: {
+    color: colors.purple,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
   },
   disabled: {
     opacity: 0.45,
