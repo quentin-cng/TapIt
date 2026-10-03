@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radii } from "../../theme/tokens";
+import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
 import type { LeaderboardView } from "./useLeaderboardData";
 
 type LeaderboardSegmentedControlProps = {
@@ -29,7 +29,7 @@ export function LeaderboardSegmentedControl({
             ]}
           >
             <Text style={[styles.label, selected && styles.labelSelected]}>
-              {view === "friends" ? "Friends" : "General"}
+              {view === "friends" ? "Friends" : "Everyone"}
             </Text>
           </Pressable>
         );
@@ -42,28 +42,28 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     borderRadius: radii.large,
-    backgroundColor: "#ecebed",
-    padding: 4,
+    backgroundColor: v3Colors.lavender,
+    padding: 3,
   },
   button: {
-    minHeight: 42,
+    minHeight: 38,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radii.medium,
   },
   buttonSelected: {
-    backgroundColor: colors.purple,
+    backgroundColor: colors.surface,
   },
   label: {
     color: colors.textSecondary,
     fontFamily: fonts.semibold,
-    fontSize: 13,
+    fontSize: 12,
   },
   labelSelected: {
-    color: colors.surface,
+    color: v3Colors.purple,
   },
   pressed: {
-    opacity: 0.72,
+    opacity: 0.7,
   },
 });

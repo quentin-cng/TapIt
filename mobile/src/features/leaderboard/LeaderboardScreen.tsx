@@ -10,15 +10,12 @@ import {
 import { useFocusEffect } from "expo-router";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
-import {
-  getFriendsLeaderboardCommentary,
-  getGeneralLeaderboardCommentary,
-} from "../../domain/leaderboard-commentary";
-import { colors, fonts, radii } from "../../theme/tokens";
+import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
 import { GeneralLeaderboardPrivacyToggle } from "./GeneralLeaderboardPrivacyToggle";
 import { LeaderboardPodium } from "./LeaderboardPodium";
 import { LeaderboardRankingRow } from "./LeaderboardRankingRow";
 import { LeaderboardSegmentedControl } from "./LeaderboardSegmentedControl";
+import { LeaderboardYourPlace } from "./LeaderboardYourPlace";
 import {
   type LeaderboardData,
   type LeaderboardView,
@@ -43,25 +40,15 @@ function LeaderboardContent({
     message: string;
   } | null;
 }) {
-  const commentaryEntries = data.rows.map((row) => ({
-    displayName: row.displayName,
-    totalPoints: row.totalPoints,
-    isCurrentUser: row.isCurrentUser,
-  }));
-  const commentary =
-    activeView === "friends"
-      ? getFriendsLeaderboardCommentary(commentaryEntries)
-      : getGeneralLeaderboardCommentary(commentaryEntries);
   const podiumRows = data.rows.slice(0, 3);
-  const remainingRows = data.rows.slice(3);
 
   return (
     <>
       {activeView === "general" ? (
-        <View style={styles.generalControls}>
-          <View style={styles.generalCopy}>
-            <Text style={styles.generalTitle}>General top 100</Text>
-            <Text style={styles.generalDescription}>
+        <View style={styles.everyoneControls}>
+          <View style={styles.everyoneCopy}>
+            <Text style={styles.everyoneTitle}>Everyone top 100</Text>
+            <Text style={styles.everyoneDescription}>
               Lifetime points across TapIt
             </Text>
           </View>
@@ -77,19 +64,17 @@ function LeaderboardContent({
       {data.rows.length ? (
         <>
           <LeaderboardPodium rows={podiumRows} />
-          <Text style={styles.commentary}>{commentary}</Text>
+          <LeaderboardYourPlace rows={data.rows} />
 
-          {remainingRows.length ? (
-            <View style={styles.rankingList}>
-              {remainingRows.map((row) => (
-                <LeaderboardRankingRow
-                  key={row.key}
-                  row={row}
-                  view={activeView}
-                />
-              ))}
-            </View>
-          ) : null}
+          <View style={styles.standingsHeading}>
+            <Text style={styles.standingsTitle}>Standings</Text>
+            <Text style={styles.standingsMeta}>Total points</Text>
+          </View>
+          <View style={styles.rankingList}>
+            {data.rows.map((row) => (
+              <LeaderboardRankingRow key={row.key} row={row} />
+            ))}
+          </View>
         </>
       ) : (
         <View style={styles.emptyState}>
@@ -136,17 +121,17 @@ export function LeaderboardScreen() {
 
   const refreshControl = (
     <RefreshControl
-      colors={[colors.purple]}
+      colors={[v3Colors.purple]}
       onRefresh={() => void refresh()}
       refreshing={isRefreshing}
-      tintColor={colors.purple}
+      tintColor={v3Colors.purple}
     />
   );
 
   return (
-    <AppScreen refreshControl={refreshControl}>
+    <AppScreen refreshControl={refreshControl} showTopbar={false} variant="v3">
       <Text accessibilityRole="header" style={styles.title}>
-        Leaderboard
+        Leaderboard.
       </Text>
 
       <LeaderboardSegmentedControl
@@ -158,7 +143,7 @@ export function LeaderboardScreen() {
         <View style={styles.loadingState}>
           <ActivityIndicator
             accessibilityLabel="Loading leaderboard"
-            color={colors.purple}
+            color={v3Colors.purple}
             size="large"
           />
           <Text style={styles.loadingText}>Loading leaderboard…</Text>
@@ -172,7 +157,10 @@ export function LeaderboardScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={() => void load()}
-            style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed && styles.pressed,
+            ]}
           >
             <Text style={styles.retryButtonText}>Try again</Text>
           </Pressable>
@@ -193,75 +181,84 @@ export function LeaderboardScreen() {
 
 const styles = StyleSheet.create({
   title: {
-    marginBottom: 17,
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 34,
-    letterSpacing: -1.8,
-    lineHeight: 38,
+    marginBottom: 16,
+    color: v3Colors.ink,
+    fontFamily: fonts.extraBold,
+    fontSize: 36,
+    letterSpacing: -2,
+    lineHeight: 41,
   },
-  generalControls: {
+  everyoneControls: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    marginTop: 15,
+    gap: 10,
+    marginTop: 13,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
-  generalCopy: {
+  everyoneCopy: {
     minWidth: 0,
     flex: 1,
-    gap: 2,
+    gap: 1,
   },
-  generalTitle: {
-    color: colors.textPrimary,
+  everyoneTitle: {
+    color: v3Colors.ink,
     fontFamily: fonts.semibold,
-    fontSize: 12,
+    fontSize: 11,
   },
-  generalDescription: {
+  everyoneDescription: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10,
+    fontSize: 9,
   },
-  commentary: {
-    marginTop: 13,
-    color: colors.textSecondary,
+  standingsHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 25,
+    paddingHorizontal: 2,
+  },
+  standingsTitle: {
+    color: v3Colors.ink,
+    fontFamily: fonts.bold,
+    fontSize: 14,
+  },
+  standingsMeta: {
+    color: colors.textMuted,
     fontFamily: fonts.medium,
-    fontSize: 11,
-    lineHeight: 17,
-    textAlign: "center",
+    fontSize: 9,
   },
   rankingList: {
-    marginTop: 15,
+    marginTop: 7,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
   emptyState: {
     alignItems: "center",
-    marginTop: 18,
+    marginTop: 20,
     borderRadius: radii.large,
-    backgroundColor: "#f0ebfc",
+    backgroundColor: v3Colors.lavender,
     paddingHorizontal: 22,
     paddingVertical: 40,
   },
   emptyInitial: {
-    width: 62,
-    height: 62,
+    width: 60,
+    height: 60,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 31,
-    backgroundColor: "#ded3f8",
+    borderRadius: 30,
+    backgroundColor: v3Colors.lavenderStrong,
   },
   emptyInitialText: {
-    color: colors.purple,
+    color: v3Colors.purple,
     fontFamily: fonts.bold,
     fontSize: 22,
   },
   emptyTitle: {
-    marginTop: 15,
-    color: colors.textPrimary,
+    marginTop: 14,
+    color: v3Colors.ink,
     fontFamily: fonts.semibold,
     fontSize: 15,
   },
@@ -300,7 +297,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   errorTitle: {
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.bold,
     fontSize: 28,
     letterSpacing: -1.2,
@@ -316,7 +313,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 20,
     borderRadius: radii.small,
-    backgroundColor: colors.purple,
+    backgroundColor: v3Colors.purple,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },

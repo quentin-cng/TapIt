@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, Switch, Text, View } from "react-native";
-import { colors, fonts } from "../../theme/tokens";
+import { colors, fonts, v3Colors } from "../../theme/tokens";
 
 type GeneralLeaderboardPrivacyToggleProps = {
   isSaving: boolean;
@@ -18,17 +18,17 @@ export function GeneralLeaderboardPrivacyToggle({
     <View style={styles.container}>
       <View style={styles.controlRow}>
         <Switch
-          accessibilityLabel="Show my name on the General leaderboard"
+          accessibilityLabel="Show my name on the Everyone leaderboard"
           disabled={isSaving}
           ios_backgroundColor="#e8e7eb"
           onValueChange={onChange}
           thumbColor={colors.surface}
-          trackColor={{ false: "#e8e7eb", true: colors.purple }}
+          trackColor={{ false: "#e8e7eb", true: v3Colors.purple }}
           value={value}
         />
         <Text style={styles.label}>Show my name</Text>
         {isSaving ? (
-          <ActivityIndicator color={colors.purple} size="small" />
+          <ActivityIndicator color={v3Colors.purple} size="small" />
         ) : null}
       </View>
       {message ? (

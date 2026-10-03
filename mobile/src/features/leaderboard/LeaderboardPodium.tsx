@@ -1,10 +1,11 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radii } from "../../theme/tokens";
+import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
+import { colors, fonts, v3Colors } from "../../theme/tokens";
 import type {
   FriendsLeaderboardRow,
   GeneralLeaderboardRow,
 } from "./useLeaderboardData";
-import { getAvatarColors, getInitials } from "./leaderboard-visuals";
 
 type PodiumRow = FriendsLeaderboardRow | GeneralLeaderboardRow;
 
@@ -15,7 +16,7 @@ function PodiumParticipant({
   featured: boolean;
   row: PodiumRow;
 }) {
-  const avatarColors = getAvatarColors(row.username ?? row.displayName);
+  const identityKey = row.username ?? `${row.displayName}-${row.rank}`;
 
   return (
     <View
@@ -24,34 +25,38 @@ function PodiumParticipant({
     >
       <View
         style={[
-          styles.avatar,
-          featured && styles.featuredAvatar,
-          row.isCurrentUser && styles.currentUserAvatar,
-          { backgroundColor: avatarColors.background },
+          styles.avatarRing,
+          featured && styles.featuredAvatarRing,
+          row.isCurrentUser && !featured && styles.currentUserAvatarRing,
         ]}
       >
-        <Text
-          style={[
-            styles.initials,
-            featured && styles.featuredInitials,
-            { color: avatarColors.foreground },
-          ]}
-        >
-          {getInitials(row.displayName)}
-        </Text>
+        {featured ? (
+          <View style={styles.trophy}>
+            <MaterialCommunityIcons color="#d79628" name="trophy" size={17} />
+          </View>
+        ) : null}
+        <V3InitialAvatar
+          identityKey={identityKey}
+          name={row.displayName}
+          size={featured ? "large" : "medium"}
+        />
       </View>
+
       <View style={[styles.rankBadge, featured && styles.featuredRankBadge]}>
         <Text style={[styles.rankText, featured && styles.featuredRankText]}>
           #{row.rank}
         </Text>
       </View>
+
       <View style={styles.nameLine}>
         <Text numberOfLines={1} style={styles.name}>
           {row.displayName}
         </Text>
         {row.isCurrentUser ? <Text style={styles.youLabel}>You</Text> : null}
       </View>
-      <Text style={styles.points}>{row.totalPoints} pts</Text>
+      <Text style={[styles.points, featured && styles.featuredPoints]}>
+        {new Intl.NumberFormat("en-CA").format(row.totalPoints)} pts
+      </Text>
     </View>
   );
 }
@@ -63,88 +68,121 @@ export function LeaderboardPodium({ rows }: { rows: PodiumRow[] }) {
 
   if (!first) return null;
 
+  const visualRows = second
+    ? third
+      ? [
+          { row: second, featured: false },
+          { row: first, featured: true },
+          { row: third, featured: false },
+        ]
+      : [
+          { row: second, featured: false },
+          { row: first, featured: true },
+        ]
+    : [{ row: first, featured: true }];
+
   return (
-    <View style={styles.container}>
-      <View style={styles.slot}>
-        {second ? <PodiumParticipant featured={false} row={second} /> : null}
-      </View>
-      <View style={styles.slot}>
-        <PodiumParticipant featured row={first} />
-      </View>
-      <View style={styles.slot}>
-        {third ? <PodiumParticipant featured={false} row={third} /> : null}
-      </View>
+    <View
+      style={[
+        styles.container,
+        visualRows.length === 1 && styles.singleContainer,
+        visualRows.length === 2 && styles.twoParticipantContainer,
+      ]}
+    >
+      {visualRows.map(({ row, featured }) => (
+        <View
+          key={row.key}
+          style={[
+            styles.slot,
+            visualRows.length === 1 && styles.singleSlot,
+            visualRows.length === 2 && styles.twoParticipantSlot,
+          ]}
+        >
+          <PodiumParticipant featured={featured} row={row} />
+        </View>
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    minHeight: 235,
+    minHeight: 206,
     flexDirection: "row",
     alignItems: "flex-end",
-    marginTop: 18,
-    borderRadius: radii.large,
-    backgroundColor: "#f0ebfc",
-    paddingHorizontal: 7,
-    paddingTop: 24,
-    paddingBottom: 20,
+    marginTop: 22,
+    paddingHorizontal: 2,
+    paddingTop: 28,
+    paddingBottom: 5,
+  },
+  singleContainer: {
+    justifyContent: "center",
+  },
+  twoParticipantContainer: {
+    justifyContent: "center",
+    gap: 22,
   },
   slot: {
     minWidth: 0,
     flex: 1,
     alignItems: "center",
   },
+  singleSlot: {
+    maxWidth: "44%",
+    flex: 0,
+    flexBasis: "44%",
+  },
+  twoParticipantSlot: {
+    maxWidth: "36%",
+    flex: 0,
+    flexBasis: "36%",
+  },
   participant: {
     width: "100%",
     alignItems: "center",
   },
   featuredParticipant: {
-    paddingBottom: 31,
+    paddingBottom: 29,
   },
-  avatar: {
-    width: 65,
-    height: 65,
+  avatarRing: {
+    padding: 3,
+    borderWidth: 2,
+    borderColor: "transparent",
+    borderRadius: 999,
+  },
+  featuredAvatarRing: {
+    padding: 4,
+    borderColor: "#efb953",
+  },
+  currentUserAvatarRing: {
+    borderColor: v3Colors.purple,
+  },
+  trophy: {
+    position: "absolute",
+    top: -24,
+    right: 0,
+    left: 0,
     alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 3,
-    borderColor: colors.surface,
-    borderRadius: 33,
-  },
-  featuredAvatar: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-  },
-  currentUserAvatar: {
-    borderColor: colors.purple,
-  },
-  initials: {
-    fontFamily: fonts.bold,
-    fontSize: 23,
-  },
-  featuredInitials: {
-    fontSize: 29,
   },
   rankBadge: {
-    minWidth: 36,
+    minWidth: 32,
     alignItems: "center",
-    marginTop: -8,
+    marginTop: -7,
     borderRadius: 999,
-    backgroundColor: "#e2d9f7",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: v3Colors.lavenderStrong,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
   featuredRankBadge: {
-    backgroundColor: colors.purple,
+    backgroundColor: "#fff0cb",
   },
   rankText: {
-    color: colors.purpleDark,
+    color: v3Colors.purpleDark,
     fontFamily: fonts.bold,
-    fontSize: 11,
+    fontSize: 10,
   },
   featuredRankText: {
-    color: colors.surface,
+    color: "#a7650d",
   },
   nameLine: {
     maxWidth: "100%",
@@ -153,22 +191,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
     marginTop: 8,
-    paddingHorizontal: 3,
+    paddingHorizontal: 2,
   },
   name: {
     minWidth: 0,
     flexShrink: 1,
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.bold,
     fontSize: 12,
     textAlign: "center",
   },
   youLabel: {
     borderRadius: 999,
-    backgroundColor: "#ded2fb",
+    backgroundColor: v3Colors.lavenderStrong,
     paddingHorizontal: 5,
     paddingVertical: 2,
-    color: colors.purpleDark,
+    color: v3Colors.purpleDark,
     fontFamily: fonts.bold,
     fontSize: 7,
     textTransform: "uppercase",
@@ -177,7 +215,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: colors.textSecondary,
     fontFamily: fonts.medium,
-    fontSize: 11,
+    fontSize: 10,
     fontVariant: ["tabular-nums"],
+  },
+  featuredPoints: {
+    color: v3Colors.purple,
+    fontFamily: fonts.bold,
   },
 });
