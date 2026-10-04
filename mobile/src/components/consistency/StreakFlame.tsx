@@ -17,11 +17,13 @@ function getFlameTier(streak: number): FlameTier {
 }
 
 export function StreakFlame({
+  compact = false,
   message,
   streak,
   tone = "light",
   variant = "default",
 }: {
+  compact?: boolean;
   message: string;
   streak: number;
   tone?: "dark" | "light";
@@ -35,18 +37,27 @@ export function StreakFlame({
       <View
         accessible
         accessibilityLabel={`${streak} week streak. ${message}`}
-        style={styles.v3Container}
+        style={[styles.v3Container, compact && styles.v3CompactContainer]}
       >
-        <View style={styles.v3FlameSurface}>
+        <View
+          style={[
+            styles.v3FlameSurface,
+            compact && styles.v3CompactFlameSurface,
+          ]}
+        >
           <MaterialCommunityIcons
             color={v3Colors.flame}
             name="fire"
-            size={39}
+            size={compact ? 32 : 39}
           />
         </View>
         <View style={styles.v3Copy}>
-          <Text style={styles.v3Title}>{streak} week streak</Text>
-          <Text style={styles.v3Message}>{message}</Text>
+          <Text style={[styles.v3Title, compact && styles.v3CompactTitle]}>
+            {streak} week streak
+          </Text>
+          <Text style={[styles.v3Message, compact && styles.v3CompactMessage]}>
+            {message}
+          </Text>
         </View>
       </View>
     );
@@ -126,6 +137,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 13,
   },
+  v3CompactContainer: {
+    minHeight: 62,
+    gap: 11,
+  },
   v3FlameSurface: {
     width: 49,
     height: 49,
@@ -133,6 +148,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 16,
     backgroundColor: v3Colors.flameSurface,
+  },
+  v3CompactFlameSurface: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
   },
   v3Copy: {
     minWidth: 0,
@@ -142,12 +162,18 @@ const styles = StyleSheet.create({
   v3Title: {
     color: v3Colors.ink,
     fontFamily: fonts.bold,
-    fontSize: 17,
-    letterSpacing: -0.4,
+    fontSize: 22,
+    letterSpacing: -0.65,
+  },
+  v3CompactTitle: {
+    fontSize: 16,
   },
   v3Message: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 13,
+  },
+  v3CompactMessage: {
+    fontSize: 12,
   },
 });

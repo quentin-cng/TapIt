@@ -2,37 +2,60 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import {
-  ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
 import { SessionDots } from "../../components/consistency/SessionDots";
 import { StreakFlame } from "../../components/consistency/StreakFlame";
-import { resolveDisplayName } from "../../domain/profile-identity";
-import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
+import { colors, fonts } from "../../theme/tokens";
+import {
+  HomeHeroArtwork,
+  PenguinProfileArtwork,
+} from "./HomeArtwork";
+import { HomeSkeleton } from "./HomeSkeleton";
 import { useHomeData } from "./useHomeData";
 
-function getProfileInitials(name: string) {
-  const words = name.trim().split(/\s+/u).filter(Boolean);
+const homeColors = {
+  background: "#fff8f1",
+  surface: "#fffcf6",
+  border: "#ebddcf",
+  ink: "#1a1333",
+  purple: "#5b3df6",
+  purpleDark: "#1a1333",
+} as const;
 
-  if (words.length > 1) {
-    return `${Array.from(words[0])[0] ?? ""}${Array.from(words.at(-1) ?? "")[0] ?? ""}`.toLocaleUpperCase(
-      "en-CA",
-    );
-  }
+const displayFont = Platform.select({
+  android: "serif",
+  default: "Georgia",
+  ios: "Georgia",
+});
 
-  return Array.from(words[0] ?? "T")
-    .slice(0, 2)
-    .join("")
-    .toLocaleUpperCase("en-CA");
+function HomeTopBar() {
+  return (
+    <View style={styles.topbar}>
+      <Pressable
+        accessibilityHint="Opens your account settings"
+        accessibilityLabel="Open Profile"
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={() => router.push("/profile")}
+        style={({ pressed }) => pressed && styles.pressed}
+      >
+        <PenguinProfileArtwork />
+      </Pressable>
+    </View>
+  );
 }
 
 export function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const { session } = useSession();
   const userId = session!.user.id;
   const { data, error, isLoading, isRefreshing, load, refresh } =
@@ -46,31 +69,38 @@ export function HomeScreen() {
 
   const refreshControl = (
     <RefreshControl
-      colors={[v3Colors.purple]}
+      colors={[homeColors.purple]}
       onRefresh={() => void refresh()}
       refreshing={isRefreshing}
-      tintColor={v3Colors.purple}
+      tintColor={homeColors.purple}
     />
   );
+  const heroTopOffset = insets.top + 20;
+  const heroHeight = 342 + heroTopOffset;
 
   if (isLoading && !data) {
     return (
-      <AppScreen refreshControl={refreshControl} variant="v3">
-        <View style={styles.loadingState}>
-          <ActivityIndicator
-            accessibilityLabel="Loading Home"
-            color={v3Colors.purple}
-            size="large"
-          />
-          <Text style={styles.loadingText}>Loading your week…</Text>
-        </View>
+      <AppScreen
+        backgroundColor={homeColors.background}
+        extendUnderTopInset
+        refreshControl={refreshControl}
+        showTopbar={false}
+        variant="v3"
+      >
+        <HomeSkeleton />
       </AppScreen>
     );
   }
 
   if (!data) {
     return (
-      <AppScreen refreshControl={refreshControl} variant="v3">
+      <AppScreen
+        backgroundColor={homeColors.background}
+        refreshControl={refreshControl}
+        showTopbar={false}
+        variant="v3"
+      >
+        <HomeTopBar />
         <View style={styles.errorState}>
           <Text accessibilityRole="header" style={styles.errorTitle}>
             Home unavailable
@@ -81,7 +111,7 @@ export function HomeScreen() {
             onPress={() => void load()}
             style={({ pressed }) => [
               styles.retryButton,
-              pressed && styles.pressed,
+              pressed && styles.retryButtonPressed,
             ]}
           >
             <Text style={styles.retryButtonText}>Try again</Text>
@@ -92,34 +122,16 @@ export function HomeScreen() {
   }
 
   const { profile, weeklyProgress, weeklyStreaks } = data;
-  const displayName = resolveDisplayName(
-    profile.display_name,
-    profile.username,
-  );
   const formattedPoints = new Intl.NumberFormat("en-CA").format(
     profile.total_points,
-  );
-  const accountControl = (
-    <Pressable
-      accessibilityLabel="Open Profile"
-      accessibilityRole="button"
-      hitSlop={8}
-      onPress={() => router.push("/profile")}
-      style={({ pressed }) => [
-        styles.accountControl,
-        pressed && styles.accountControlPressed,
-      ]}
-    >
-      <Text style={styles.accountInitials}>
-        {getProfileInitials(displayName)}
-      </Text>
-    </Pressable>
   );
 
   return (
     <AppScreen
+      backgroundColor={homeColors.background}
+      extendUnderTopInset
       refreshControl={refreshControl}
-      topbarAccessory={accountControl}
+      showTopbar={false}
       variant="v3"
     >
       {data.hasPersonalDataError ? (
@@ -128,67 +140,78 @@ export function HomeScreen() {
         </Text>
       ) : null}
 
-      <View style={styles.pointsHero}>
-        <Text style={styles.pointsLabel}>Your points</Text>
-        <Text
-          accessibilityLabel={`${profile.total_points} points`}
-          adjustsFontSizeToFit
-          numberOfLines={1}
-          style={styles.pointsValue}
-        >
-          {formattedPoints}
-        </Text>
+      <View style={[styles.hero, { height: heroHeight }]}>
+        <HomeHeroArtwork height={heroHeight} />
+        <View style={[styles.heroTopbar, { paddingTop: heroTopOffset }]}>
+          <HomeTopBar />
+        </View>
         <Pressable
-          accessibilityHint="Opens the Rewards coming soon page"
+          accessibilityHint="Opens Rewards"
+          accessibilityLabel={`${profile.total_points} points. View rewards.`}
           accessibilityRole="button"
           onPress={() => router.push("/rewards")}
           style={({ pressed }) => [
-            styles.rewardsButton,
-            pressed && styles.rewardsButtonPressed,
+            styles.pointsBlock,
+            { top: heroTopOffset + 48 },
+            pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.rewardsButtonText}>View rewards</Text>
-          <MaterialCommunityIcons
-            color={colors.surface}
-            name="arrow-right"
-            size={17}
-          />
+          <Text
+            adjustsFontSizeToFit
+            numberOfLines={1}
+            style={styles.pointsValue}
+          >
+            {formattedPoints}
+          </Text>
+          <Text style={styles.pointsLabel}>points</Text>
+          <View style={styles.rewardsLink}>
+            <Text style={styles.rewardsLinkText}>View rewards</Text>
+            <MaterialCommunityIcons
+              color={homeColors.purple}
+              name="arrow-right"
+              size={14}
+            />
+          </View>
         </Pressable>
       </View>
 
-      <View style={styles.divider} />
-
-      <View style={styles.weekSection}>
-        <View style={styles.weekHeader}>
-          <Text style={styles.sectionTitle}>Weekly goal</Text>
-          <Pressable
-            accessibilityHint="Opens Profile where you can change your weekly goal"
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={() => router.push("/profile")}
-            style={({ pressed }) => [
-              styles.editGoal,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.editGoalText}>Edit</Text>
-            <MaterialCommunityIcons
-              color={v3Colors.purple}
-              name="pencil-outline"
-              size={15}
-            />
-          </Pressable>
-        </View>
-
-        {weeklyProgress ? (
-          <>
-            <View style={styles.weekSummary}>
-              <Text style={styles.visitsValue}>
-                {weeklyProgress.sessionsCompleted}
-                <Text style={styles.visitsTarget}>
-                  {" "}/ {weeklyProgress.targetSessions} visits
-                </Text>
+      <View style={styles.contentPanel}>
+        <View style={styles.weekCard}>
+          <View style={styles.weekHeader}>
+            <Pressable
+              accessibilityHint="Opens Profile where you can change your weekly goal"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => router.push("/profile")}
+              style={({ pressed }) => [
+                styles.editGoal,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.sectionTitle}>This week</Text>
+              <MaterialCommunityIcons
+                color={homeColors.purple}
+                name="pencil-outline"
+                size={13}
+              />
+            </Pressable>
+            {weeklyProgress ? (
+              <Text style={styles.weekCount}>
+                {weeklyProgress.sessionsCompleted} / {weeklyProgress.targetSessions}
               </Text>
+            ) : null}
+          </View>
+
+          {weeklyProgress ? (
+            <View style={styles.sessionRow}>
+              <View style={styles.sessionDots}>
+                <SessionDots
+                  accentColor={homeColors.purple}
+                  completed={weeklyProgress.sessionsCompleted}
+                  target={weeklyProgress.targetSessions}
+                  variant="v3"
+                />
+              </View>
               <Text
                 style={[
                   styles.remaining,
@@ -200,156 +223,150 @@ export function HomeScreen() {
                   : `${weeklyProgress.remainingSessions} to go`}
               </Text>
             </View>
-            <View style={styles.progressDots}>
-              <SessionDots
-                completed={weeklyProgress.sessionsCompleted}
-                target={weeklyProgress.targetSessions}
-                variant="v3"
-              />
+          ) : (
+            <View style={styles.noGoalState}>
+              <Text style={styles.noGoalTitle}>No weekly goal yet.</Text>
+              <Text style={styles.noGoalCopy}>
+                Set a weekly commitment to start tracking your consistency.
+              </Text>
             </View>
-          </>
-        ) : (
-          <View style={styles.noGoalState}>
-            <Text style={styles.noGoalTitle}>No weekly goal yet.</Text>
-            <Text style={styles.noGoalCopy}>
-              Use Edit to set your weekly commitment in Profile.
-            </Text>
-          </View>
-        )}
-      </View>
+          )}
+        </View>
 
-      <View style={styles.streakCard}>
-        <StreakFlame
-          message={
-            weeklyStreaks.currentStreak > 0
-              ? "Keep it alive this week."
-              : "Complete your goal to start one."
-          }
-          streak={weeklyStreaks.currentStreak}
-          variant="v3"
-        />
+        <View style={styles.streakCard}>
+          <StreakFlame
+            message={
+              weeklyStreaks.currentStreak > 0
+                ? "Keep it alive this week."
+                : "Complete your goal to start one."
+            }
+            streak={weeklyStreaks.currentStreak}
+            variant="v3"
+          />
+          <MaterialCommunityIcons
+            color={homeColors.ink}
+            name="chevron-right"
+            size={22}
+          />
+        </View>
+
+        <Pressable
+          accessibilityHint="Opens a visual preview of the future TapIt NFC reader"
+          accessibilityLabel="Tap to check in"
+          accessibilityRole="button"
+          onPress={() => router.push("/ready-to-tap")}
+          style={({ pressed }) => [
+            styles.checkinCta,
+            pressed && styles.checkinCtaPressed,
+          ]}
+        >
+          <MaterialCommunityIcons
+            color={homeColors.surface}
+            name="contactless-payment"
+            size={29}
+          />
+          <Text style={styles.checkinCtaText}>Tap to check in</Text>
+          <MaterialCommunityIcons
+            color={homeColors.surface}
+            name="chevron-right"
+            size={25}
+          />
+        </Pressable>
       </View>
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  accountControl: {
-    minWidth: 36,
-    height: 36,
+  topbar: {
+    minHeight: 42,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 18,
-    backgroundColor: v3Colors.lavenderStrong,
-    paddingHorizontal: 8,
-  },
-  accountControlPressed: {
-    opacity: 0.68,
-  },
-  accountInitials: {
-    color: v3Colors.ink,
-    fontFamily: fonts.bold,
-    fontSize: 11,
+    justifyContent: "flex-start",
   },
   inlineError: {
-    marginBottom: 16,
+    marginTop: 4,
+    marginBottom: 8,
     color: colors.danger,
     fontFamily: fonts.medium,
     fontSize: 12,
     lineHeight: 18,
-    textAlign: "center",
   },
-  pointsHero: {
-    alignItems: "center",
-    paddingTop: 8,
+  hero: {
+    marginHorizontal: -20,
+    overflow: "hidden",
   },
-  pointsLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    fontSize: 13,
+  heroTopbar: {
+    paddingHorizontal: 24,
+  },
+  pointsBlock: {
+    position: "absolute",
+    zIndex: 1,
+    left: 24,
+    maxWidth: "55%",
   },
   pointsValue: {
-    maxWidth: "100%",
-    marginTop: 2,
-    color: v3Colors.purple,
-    fontFamily: fonts.extraBold,
-    fontSize: 104,
+    color: homeColors.ink,
+    fontFamily: displayFont,
+    fontSize: 94,
     fontVariant: ["tabular-nums"],
-    letterSpacing: -7.2,
-    lineHeight: 108,
-    textAlign: "center",
+    fontWeight: "800",
+    letterSpacing: -5.5,
+    lineHeight: 96,
   },
-  rewardsButton: {
-    minHeight: 42,
-    marginTop: 8,
+  pointsLabel: {
+    marginTop: -3,
+    color: homeColors.ink,
+    fontFamily: displayFont,
+    fontSize: 24,
+    fontWeight: "700",
+    letterSpacing: -0.8,
+  },
+  rewardsLink: {
+    marginTop: 6,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 999,
-    backgroundColor: v3Colors.purple,
-    paddingHorizontal: 20,
+    gap: 5,
   },
-  rewardsButtonPressed: {
-    backgroundColor: v3Colors.purpleDark,
-    opacity: 0.92,
-  },
-  rewardsButtonText: {
-    color: colors.surface,
-    fontFamily: fonts.bold,
-    fontSize: 13,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: 31,
-    backgroundColor: colors.border,
-  },
-  weekSection: {
-    paddingTop: 19,
-  },
-  weekHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionTitle: {
-    color: v3Colors.ink,
-    fontFamily: fonts.bold,
-    fontSize: 16,
-    letterSpacing: -0.35,
-  },
-  editGoal: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 4,
-  },
-  editGoalText: {
-    color: v3Colors.purple,
+  rewardsLinkText: {
+    color: homeColors.purple,
     fontFamily: fonts.semibold,
     fontSize: 12,
   },
-  weekSummary: {
-    marginTop: 11,
+  contentPanel: {
+    zIndex: 2,
+    marginTop: -26,
+    marginHorizontal: -20,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: homeColors.surface,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 12,
+  },
+  weekCard: {
+    paddingHorizontal: 4,
+    paddingBottom: 14,
+  },
+  weekHeader: {
     flexDirection: "row",
     alignItems: "baseline",
     justifyContent: "space-between",
     gap: 16,
   },
-  visitsValue: {
-    minWidth: 0,
-    flexShrink: 1,
-    color: v3Colors.ink,
-    fontFamily: fonts.bold,
-    fontSize: 29,
-    fontVariant: ["tabular-nums"],
-    letterSpacing: -1.2,
+  sectionTitle: {
+    color: homeColors.ink,
+    fontFamily: displayFont,
+    fontSize: 27,
+    fontWeight: "700",
+    letterSpacing: -0.5,
   },
-  visitsTarget: {
-    color: colors.textMuted,
-    fontFamily: fonts.medium,
-    fontSize: 13,
-    letterSpacing: 0,
+  weekCount: {
+    color: homeColors.ink,
+    fontFamily: displayFont,
+    fontSize: 27,
+    fontVariant: ["tabular-nums"],
+    fontWeight: "700",
   },
   remaining: {
     color: colors.textSecondary,
@@ -357,19 +374,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   goalComplete: {
-    color: v3Colors.purple,
+    color: homeColors.purple,
     fontFamily: fonts.semibold,
   },
-  progressDots: {
-    marginTop: 15,
+  sessionRow: {
+    marginTop: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 13,
+  },
+  sessionDots: {
+    minWidth: 0,
+    flex: 1,
+  },
+  editGoal: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   noGoalState: {
-    marginTop: 16,
+    marginTop: 15,
   },
   noGoalTitle: {
-    color: v3Colors.ink,
+    color: homeColors.ink,
     fontFamily: fonts.semibold,
-    fontSize: 16,
+    fontSize: 15,
   },
   noGoalCopy: {
     marginTop: 5,
@@ -379,34 +408,45 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   streakCard: {
-    marginTop: 27,
-    borderRadius: radii.large,
-    backgroundColor: v3Colors.lavender,
-    paddingHorizontal: 14,
-    paddingVertical: 3,
-  },
-  loadingState: {
-    flex: 1,
-    minHeight: 420,
+    minHeight: 64,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
+    justifyContent: "space-between",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: homeColors.border,
+    paddingRight: 4,
+    paddingLeft: 4,
   },
-  loadingText: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 14,
+  checkinCta: {
+    minHeight: 54,
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 19,
+    backgroundColor: homeColors.purpleDark,
+    paddingHorizontal: 20,
+  },
+  checkinCtaText: {
+    color: homeColors.surface,
+    fontFamily: fonts.semibold,
+    fontSize: 16,
+  },
+  checkinCtaPressed: {
+    opacity: 0.86,
   },
   errorState: {
+    marginTop: 28,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: homeColors.border,
     paddingTop: 24,
   },
   errorTitle: {
-    color: v3Colors.ink,
-    fontFamily: fonts.bold,
-    fontSize: 28,
-    letterSpacing: -1.2,
+    color: homeColors.ink,
+    fontFamily: displayFont,
+    fontSize: 30,
+    fontWeight: "700",
+    letterSpacing: -1,
   },
   errorCopy: {
     marginTop: 10,
@@ -418,13 +458,16 @@ const styles = StyleSheet.create({
   retryButton: {
     alignSelf: "flex-start",
     marginTop: 20,
-    borderRadius: radii.small,
-    backgroundColor: v3Colors.purple,
+    borderRadius: 10,
+    backgroundColor: homeColors.purple,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
+  retryButtonPressed: {
+    opacity: 0.75,
+  },
   retryButtonText: {
-    color: colors.surface,
+    color: homeColors.surface,
     fontFamily: fonts.bold,
     fontSize: 14,
   },

@@ -5,7 +5,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, fonts, v3Colors } from "../theme/tokens";
 
 type AppScreenProps = {
+  backgroundColor?: string;
   children: ReactNode;
+  extendUnderTopInset?: boolean;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   showTopbar?: boolean;
   topbarAccessory?: ReactNode;
@@ -13,7 +15,9 @@ type AppScreenProps = {
 };
 
 export function AppScreen({
+  backgroundColor = colors.background,
   children,
+  extendUnderTopInset = false,
   refreshControl,
   showTopbar = true,
   topbarAccessory,
@@ -22,7 +26,10 @@ export function AppScreen({
   const isV3 = variant === "v3";
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.safeArea}>
+    <SafeAreaView
+      edges={extendUnderTopInset ? [] : ["top"]}
+      style={[styles.safeArea, { backgroundColor }]}
+    >
       {showTopbar ? (
         <View style={[styles.topbar, isV3 && styles.v3Topbar]}>
           <Text
@@ -37,7 +44,11 @@ export function AppScreen({
         </View>
       ) : null}
       <ScrollView
-        contentContainerStyle={[styles.content, isV3 && styles.v3Content]}
+        contentContainerStyle={[
+          styles.content,
+          isV3 && styles.v3Content,
+          extendUnderTopInset && styles.edgeToEdgeTopContent,
+        ]}
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
@@ -94,5 +105,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 64,
+  },
+  edgeToEdgeTopContent: {
+    paddingTop: 0,
   },
 });

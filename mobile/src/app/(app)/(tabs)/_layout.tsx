@@ -3,14 +3,21 @@ import { Tabs } from "expo-router";
 import { StyleSheet } from "react-native";
 import { colors, fonts } from "../../../theme/tokens";
 
+const tabColors = {
+  active: "#5b3df6",
+  background: "#fffcf6",
+  border: "#ebddcf",
+  inactive: "#777386",
+} as const;
+
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },
-        tabBarActiveTintColor: colors.purple,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarActiveTintColor: tabColors.active,
+        tabBarInactiveTintColor: tabColors.inactive,
         tabBarHideOnKeyboard: true,
         tabBarLabelStyle: styles.label,
         tabBarStyle: styles.tabBar,
@@ -20,8 +27,12 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons color={color} name="home-outline" size={size} />
+          tabBarIcon: ({ color, focused, size }) => (
+            <MaterialCommunityIcons
+              color={color}
+              name={focused ? "home" : "home-outline"}
+              size={size}
+            />
           ),
         }}
       />
@@ -29,10 +40,10 @@ export default function TabLayout() {
         name="friends"
         options={{
           title: "Friends",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, focused, size }) => (
             <MaterialCommunityIcons
               color={color}
-              name="account-multiple-outline"
+              name={focused ? "account-multiple" : "account-multiple-outline"}
               size={size}
             />
           ),
@@ -42,8 +53,12 @@ export default function TabLayout() {
         name="leaderboard"
         options={{
           title: "Leaderboard",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons color={color} name="trophy-outline" size={size} />
+          tabBarIcon: ({ color, focused, size }) => (
+            <MaterialCommunityIcons
+              color={color}
+              name={focused ? "trophy" : "trophy-outline"}
+              size={size}
+            />
           ),
         }}
       />
@@ -51,10 +66,10 @@ export default function TabLayout() {
         name="recap"
         options={{
           title: "Recap",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, focused, size }) => (
             <MaterialCommunityIcons
               color={color}
-              name="calendar-week-outline"
+              name={focused ? "calendar-week" : "calendar-week-outline"}
               size={size}
             />
           ),
@@ -66,9 +81,11 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    borderTopColor: colors.border,
-    backgroundColor: colors.surface,
+    minHeight: 62,
+    borderTopColor: tabColors.border,
+    backgroundColor: tabColors.background,
     elevation: 0,
+    paddingTop: 5,
     shadowOpacity: 0,
   },
   label: {
