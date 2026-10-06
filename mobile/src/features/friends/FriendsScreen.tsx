@@ -14,6 +14,7 @@ import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
 import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
 import { resolveDisplayName } from "../../domain/profile-identity";
+import { TapPressable } from "../../motion/TapPressable";
 import { colors, fonts, radii } from "../../theme/tokens";
 import { PenguinProfileArtwork } from "../home/HomeArtwork";
 import { FriendActionButton } from "./FriendActionButton";
@@ -505,9 +506,10 @@ export function FriendsScreen() {
           )}
         </View>
 
-        <Pressable
+        <TapPressable
           accessibilityHint="Focuses friend search"
           accessibilityRole="button"
+          haptic="press"
           onPress={openAddFlow}
           style={({ pressed }) => [
             styles.addFriendsButton,
@@ -520,7 +522,7 @@ export function FriendsScreen() {
             size={22}
           />
           <Text style={styles.addFriendsLabel}>Add friends</Text>
-        </Pressable>
+        </TapPressable>
       </AppScreen>
 
       <FriendDetailSheet

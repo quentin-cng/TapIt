@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { TapPressable } from "../../motion/TapPressable";
 import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
 import type { ProfileMutationResult } from "./useProfileData";
 
@@ -113,9 +114,10 @@ export function WeeklyGoalEditor({
         </Text>
       ) : null}
 
-      <Pressable
+      <TapPressable
         accessibilityRole="button"
         disabled={isSaving}
+        haptic="press"
         onPress={() => void save()}
         style={({ pressed }) => [
           styles.saveButton,
@@ -128,7 +130,7 @@ export function WeeklyGoalEditor({
         ) : (
           <Text style={styles.saveButtonText}>Save goal</Text>
         )}
-      </Pressable>
+      </TapPressable>
     </View>
   );
 }

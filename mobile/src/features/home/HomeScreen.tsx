@@ -13,6 +13,7 @@ import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
 import { SessionDots } from "../../components/consistency/SessionDots";
 import { StreakFlame } from "../../components/consistency/StreakFlame";
+import { TapPressable } from "../../motion/TapPressable";
 import { colors, fonts } from "../../theme/tokens";
 import {
   HomeHeroArtwork,
@@ -262,10 +263,11 @@ export function HomeScreen() {
           />
         </View>
 
-        <Pressable
+        <TapPressable
           accessibilityHint="Opens a visual preview of the future TapIt NFC reader"
           accessibilityLabel="Tap to check in"
           accessibilityRole="button"
+          haptic="press"
           onPress={() => router.push("/ready-to-tap")}
           style={({ pressed }) => [
             styles.checkinCta,
@@ -283,7 +285,7 @@ export function HomeScreen() {
             name="chevron-right"
             size={25}
           />
-        </Pressable>
+        </TapPressable>
       </View>
     </AppScreen>
   );

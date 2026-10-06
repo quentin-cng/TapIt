@@ -1,4 +1,3 @@
-import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
@@ -14,6 +13,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../auth/SessionProvider";
+import { TapPressable } from "../motion/TapPressable";
+import { triggerTapHaptic } from "../motion/haptics";
 import { fonts } from "../theme/tokens";
 import { getResultCopy, type CheckinRow } from "./checkin-contract";
 import { CheckinSuccessView } from "./CheckinSuccessView";
@@ -140,9 +141,7 @@ export function CheckinScreen(props: CheckinScreenProps) {
 
   function startSuccessPreview(nextPreview: CheckinPreview) {
     setPreview(nextPreview);
-    void Haptics.notificationAsync(
-      Haptics.NotificationFeedbackType.Success,
-    ).catch(() => undefined);
+    triggerTapHaptic("success");
   }
 
   if (preview?.result.status === "success") {
@@ -374,8 +373,9 @@ export function CheckinScreen(props: CheckinScreenProps) {
                     : "This location does not require GPS verification. Your visit is rewarded only after you press CHECK IN."}
                 </Text>
 
-                <Pressable
+                <TapPressable
                   accessibilityRole="button"
+                  haptic="press"
                   onPress={() => void flow.performCheckin()}
                   style={({ pressed }) => [
                     styles.checkinButton,
@@ -383,7 +383,7 @@ export function CheckinScreen(props: CheckinScreenProps) {
                   ]}
                 >
                   <Text style={styles.checkinButtonText}>CHECK IN</Text>
-                </Pressable>
+                </TapPressable>
 
                 {isDevelopmentMode ? (
                   <Pressable

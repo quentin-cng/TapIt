@@ -1,4 +1,3 @@
-import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -6,6 +5,7 @@ import {
   type WeeklyGoalSchedule,
 } from "../domain/weekly-goals";
 import { supabase } from "../lib/supabase";
+import { triggerTapHaptic } from "../motion/haptics";
 import {
   firstRow,
   isCheckinContextRow,
@@ -371,9 +371,7 @@ export function useCheckinFlow(
 
         if (feedbackKey.current !== committedKey) {
           feedbackKey.current = committedKey;
-          void Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success,
-          ).catch(() => undefined);
+          triggerTapHaptic("success");
           void loadSuccessStreak(committedKey);
         }
       }
