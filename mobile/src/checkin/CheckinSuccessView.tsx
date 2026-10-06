@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     maxWidth: 340,
     marginTop: 9,
     color: "#ffffff",
-    fontFamily: fonts.bold,
+    fontFamily: fonts.display,
     fontSize: 36,
     letterSpacing: -2,
     lineHeight: 40,
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   },
   pointsValue: {
     color: "#ffffff",
-    fontFamily: fonts.extraBold,
+    fontFamily: fonts.display,
     fontSize: 76,
     fontVariant: ["tabular-nums"],
     letterSpacing: -5.5,

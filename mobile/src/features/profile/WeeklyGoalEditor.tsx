@@ -1,5 +1,4 @@
 import { useState } from "react";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
   ActivityIndicator,
   Pressable,
@@ -7,19 +6,17 @@ import {
   Text,
   View,
 } from "react-native";
-import { colors, fonts, radii } from "../../theme/tokens";
+import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
 import type { ProfileMutationResult } from "./useProfileData";
 
 type WeeklyGoalEditorProps = {
   currentGoal: number | null;
-  onCancel: () => void;
   onSave: (goal: number) => Promise<ProfileMutationResult>;
   pendingGoal: number | null;
 };
 
 export function WeeklyGoalEditor({
   currentGoal,
-  onCancel,
   onSave,
   pendingGoal,
 }: WeeklyGoalEditorProps) {
@@ -35,9 +32,9 @@ export function WeeklyGoalEditor({
     setSelectedGoal(pendingGoal ?? currentGoal ?? 1);
   }
 
-  function adjustGoal(change: number) {
+  function chooseGoal(goal: number) {
     setNotice(null);
-    setSelectedGoal((current) => Math.min(7, Math.max(1, current + change)));
+    setSelectedGoal(goal);
   }
 
   async function save() {
@@ -52,71 +49,44 @@ export function WeeklyGoalEditor({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text accessibilityRole="header" style={styles.title}>
-          Weekly goal
-        </Text>
-        <Pressable
-          accessibilityLabel="Close weekly goal"
-          accessibilityRole="button"
-          disabled={isSaving}
-          hitSlop={8}
-          onPress={onCancel}
-          style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
-        >
-          <MaterialCommunityIcons
-            color={colors.textSecondary}
-            name="close"
-            size={21}
-          />
-        </Pressable>
+      <View style={styles.headingRow}>
+        <Text accessibilityRole="header" style={styles.title}>Weekly goal</Text>
+        {currentGoal !== null ? (
+          <Text style={styles.currentGoal}>
+            {currentGoal} / week
+          </Text>
+        ) : null}
       </View>
 
-      <Text style={styles.prompt}>
-        How many times do you want to show up each week?
-      </Text>
+      <View accessibilityRole="radiogroup" style={styles.choices}>
+        {Array.from({ length: 7 }, (_, index) => index + 1).map((goal) => {
+          const isSelected = selectedGoal === goal;
 
-      <View style={styles.counter}>
-        <Pressable
-          accessibilityLabel="Decrease weekly goal"
-          accessibilityRole="button"
-          disabled={isSaving || selectedGoal === 1}
-          onPress={() => adjustGoal(-1)}
-          style={({ pressed }) => [
-            styles.counterButton,
-            selectedGoal === 1 && styles.disabled,
-            pressed && styles.pressed,
-          ]}
-        >
-          <MaterialCommunityIcons
-            color={colors.textPrimary}
-            name="minus"
-            size={25}
-          />
-        </Pressable>
-        <View style={styles.goalValueWrap}>
-          <Text style={styles.goalValue}>{selectedGoal}</Text>
-          <Text style={styles.goalUnit}>
-            {selectedGoal === 1 ? "workout" : "workouts"}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityLabel="Increase weekly goal"
-          accessibilityRole="button"
-          disabled={isSaving || selectedGoal === 7}
-          onPress={() => adjustGoal(1)}
-          style={({ pressed }) => [
-            styles.counterButton,
-            selectedGoal === 7 && styles.disabled,
-            pressed && styles.pressed,
-          ]}
-        >
-          <MaterialCommunityIcons
-            color={colors.textPrimary}
-            name="plus"
-            size={25}
-          />
-        </Pressable>
+          return (
+            <Pressable
+              accessibilityLabel={`${goal} ${goal === 1 ? "session" : "sessions"} per week`}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: isSelected, disabled: isSaving }}
+              disabled={isSaving}
+              key={goal}
+              onPress={() => chooseGoal(goal)}
+              style={({ pressed }) => [
+                styles.choice,
+                isSelected && styles.selectedChoice,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.choiceText,
+                  isSelected && styles.selectedChoiceText,
+                ]}
+              >
+                {goal}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <Text style={styles.scheduleCopy}>
@@ -165,77 +135,51 @@ export function WeeklyGoalEditor({
 
 const styles = StyleSheet.create({
   container: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: colors.background,
-    paddingHorizontal: 22,
-    paddingTop: 18,
-    paddingBottom: 28,
+    marginTop: 36,
   },
-  header: {
+  headingRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   title: {
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 23,
-    letterSpacing: -0.8,
+    color: v3Colors.ink,
+    fontFamily: fonts.semibold,
+    fontSize: 17,
+    letterSpacing: -0.3,
   },
-  closeButton: {
-    width: 38,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 19,
-    backgroundColor: colors.surfaceElevated,
-  },
-  prompt: {
-    maxWidth: 300,
-    marginTop: 14,
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  counter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 25,
-    marginVertical: 27,
-  },
-  counterButton: {
-    width: 48,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: 24,
-    backgroundColor: colors.surface,
-  },
-  goalValueWrap: {
-    minWidth: 76,
-    alignItems: "center",
-  },
-  goalValue: {
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 42,
-    fontVariant: ["tabular-nums"],
-    letterSpacing: -2,
-    lineHeight: 44,
-  },
-  goalUnit: {
-    marginTop: 2,
+  currentGoal: {
     color: colors.textSecondary,
     fontFamily: fonts.medium,
-    fontSize: 11,
+    fontSize: 12,
+  },
+  choices: {
+    flexDirection: "row",
+    gap: 7,
+    marginTop: 14,
+  },
+  choice: {
+    minWidth: 0,
+    minHeight: 42,
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 13,
+    backgroundColor: "#f2e9de",
+  },
+  selectedChoice: {
+    backgroundColor: v3Colors.purpleDark,
+  },
+  choiceText: {
+    color: v3Colors.ink,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+  },
+  selectedChoiceText: {
+    color: "#fff8f1",
   },
   scheduleCopy: {
-    textAlign: "center",
+    marginTop: 12,
     color: colors.textSecondary,
     fontFamily: fonts.medium,
     fontSize: 12,
@@ -243,7 +187,7 @@ const styles = StyleSheet.create({
   pendingNote: {
     marginTop: 13,
     borderRadius: radii.medium,
-    backgroundColor: "#ece6fb",
+    backgroundColor: v3Colors.lavender,
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: colors.purpleDark,
@@ -264,12 +208,12 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   saveButton: {
-    minHeight: 50,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 18,
     borderRadius: radii.medium,
-    backgroundColor: colors.purple,
+    backgroundColor: v3Colors.ink,
     paddingHorizontal: 18,
   },
   saveButtonText: {

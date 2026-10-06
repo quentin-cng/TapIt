@@ -1,21 +1,24 @@
-import { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router, useFocusEffect } from "expo-router";
+import { useCallback, useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppScreen } from "../../components/AppScreen";
 import { supabase } from "../../lib/supabase";
-import { colors, fonts, radii } from "../../theme/tokens";
+import { colors, fonts } from "../../theme/tokens";
+import { PenguinProfileArtwork } from "../home/HomeArtwork";
 
 type RewardsProfile = {
   total_points: number;
 };
 
-function returnHome() {
-  if (router.canGoBack()) {
-    router.back();
-  } else {
-    router.replace("/");
-  }
-}
+const rewardsColors = {
+  background: "#fff8f1",
+  surface: "#fffcf6",
+  ink: "#1a1333",
+  purple: "#5b3df6",
+  lavender: "#f2edff",
+  lavenderStrong: "#ddd1f8",
+} as const;
 
 export function RewardsScreen() {
   const [points, setPoints] = useState<number | null>(null);
@@ -56,40 +59,80 @@ export function RewardsScreen() {
     }, [load]),
   );
 
-  const returnControl = (
-    <Pressable
-      accessibilityRole="button"
-      hitSlop={10}
-      onPress={returnHome}
-      style={({ pressed }) => pressed && styles.pressed}
-    >
-      <Text style={styles.returnText}>Back</Text>
-    </Pressable>
-  );
+  const formattedPoints =
+    points === null ? null : new Intl.NumberFormat("en-CA").format(points);
 
   return (
-    <AppScreen topbarAccessory={returnControl}>
-      <Text style={styles.eyebrow}>Rewards</Text>
-      <Text accessibilityRole="header" style={styles.title}>
-        Your consistency will pay off.
-      </Text>
+    <AppScreen
+      backgroundColor={rewardsColors.background}
+      showTopbar={false}
+      variant="v3"
+    >
+      <View style={styles.header}>
+        <Pressable
+          accessibilityHint="Opens your account settings"
+          accessibilityLabel="Open Profile"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={() => router.push("/profile")}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <PenguinProfileArtwork />
+        </Pressable>
 
-      <View style={styles.pointsBlock}>
-        {isLoading && points === null ? (
-          <ActivityIndicator
-            accessibilityLabel="Loading points"
-            color={colors.purple}
-            size="large"
+        <Text accessibilityRole="header" style={styles.headerTitle}>
+          Rewards<Text style={styles.titlePeriod}>.</Text>
+        </Text>
+
+        <View
+          accessible
+          accessibilityLabel={
+            formattedPoints === null
+              ? isLoading
+                ? "Loading lifetime points"
+                : "Lifetime points unavailable"
+              : `${points} lifetime points`
+          }
+          style={styles.pointsPill}
+        >
+          {formattedPoints !== null ? (
+            <View style={styles.pointsLine}>
+              <Text
+                adjustsFontSizeToFit
+                numberOfLines={1}
+                style={styles.pointsValue}
+              >
+                {formattedPoints}
+              </Text>
+              <Text style={styles.pointsUnit}>pts</Text>
+            </View>
+          ) : isLoading ? (
+            <View style={styles.pointsSkeleton} />
+          ) : (
+            <MaterialCommunityIcons
+              color={colors.textSecondary}
+              name="alert-circle-outline"
+              size={17}
+            />
+          )}
+        </View>
+      </View>
+
+      <View style={styles.comingSoon}>
+        <View accessibilityElementsHidden style={styles.giftSurface}>
+          <MaterialCommunityIcons
+            color={rewardsColors.purple}
+            name="gift-outline"
+            size={48}
           />
-        ) : points !== null ? (
-          <>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.points}>
-              {points}
-            </Text>
-            <Text style={styles.pointsLabel}>Points earned</Text>
-          </>
-        ) : (
-          <View>
+        </View>
+        <Text style={styles.comingSoonTitle}>Coming soon.</Text>
+        <Text style={styles.comingSoonCopy}>
+          Soon, you’ll be able to use your points to get discounts.
+        </Text>
+
+        {error ? (
+          <View style={styles.errorState}>
             <Text accessibilityRole="alert" style={styles.error}>
               {error}
             </Text>
@@ -104,116 +147,123 @@ export function RewardsScreen() {
               <Text style={styles.retryText}>Try again</Text>
             </Pressable>
           </View>
-        )}
-      </View>
-
-      <View style={styles.comingSoon}>
-        <Text style={styles.comingSoonLabel}>Coming soon</Text>
-        <Text style={styles.comingSoonTitle}>Rewards are on the way.</Text>
-        <Text style={styles.comingSoonCopy}>
-          Points you earn today will count when TapIt Rewards launches. Keep
-          showing up in the meantime.
-        </Text>
+        ) : null}
       </View>
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  eyebrow: {
-    color: colors.purple,
-    fontFamily: fonts.bold,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
+  header: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
   },
-  title: {
-    maxWidth: 330,
-    marginTop: 8,
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 39,
-    letterSpacing: -2.3,
-    lineHeight: 43,
+  headerTitle: {
+    position: "absolute",
+    right: 92,
+    left: 92,
+    color: rewardsColors.ink,
+    fontFamily: fonts.display,
+    fontSize: 29,
+    letterSpacing: -1,
+    textAlign: "center",
   },
-  pointsBlock: {
-    minHeight: 178,
+  titlePeriod: { color: rewardsColors.purple },
+  pointsPill: {
+    minWidth: 82,
+    height: 34,
+    alignItems: "center",
     justifyContent: "center",
-    marginTop: 42,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    paddingVertical: 28,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: rewardsColors.lavenderStrong,
+    borderRadius: 17,
+    backgroundColor: rewardsColors.lavender,
+    paddingHorizontal: 10,
   },
-  points: {
-    color: colors.textPrimary,
-    fontFamily: fonts.extraBold,
-    fontSize: 72,
+  pointsLine: {
+    maxWidth: 112,
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 4,
+  },
+  pointsValue: {
+    minWidth: 0,
+    flexShrink: 1,
+    color: rewardsColors.purple,
+    fontFamily: fonts.display,
+    fontSize: 17,
     fontVariant: ["tabular-nums"],
-    letterSpacing: -5.5,
-    lineHeight: 74,
+    lineHeight: 20,
   },
-  pointsLabel: {
-    marginTop: 7,
-    color: colors.textSecondary,
-    fontFamily: fonts.bold,
-    fontSize: 10,
-    letterSpacing: 1.3,
-    textTransform: "uppercase",
+  pointsUnit: {
+    color: rewardsColors.purple,
+    fontFamily: fonts.semibold,
+    fontSize: 9,
+  },
+  pointsSkeleton: {
+    width: 50,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: rewardsColors.lavenderStrong,
   },
   comingSoon: {
-    marginTop: 44,
+    minHeight: 440,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 22,
+    paddingBottom: 52,
   },
-  comingSoonLabel: {
-    color: colors.purple,
-    fontFamily: fonts.bold,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
+  giftSurface: {
+    width: 108,
+    height: 108,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 54,
+    backgroundColor: rewardsColors.lavender,
   },
   comingSoonTitle: {
-    marginTop: 12,
-    color: colors.textPrimary,
-    fontFamily: fonts.semibold,
-    fontSize: 23,
-    letterSpacing: -0.8,
+    marginTop: 28,
+    color: rewardsColors.ink,
+    fontFamily: fonts.display,
+    fontSize: 39,
+    letterSpacing: -1.4,
+    textAlign: "center",
   },
   comingSoonCopy: {
-    maxWidth: 340,
-    marginTop: 11,
+    maxWidth: 310,
+    marginTop: 12,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 15,
     lineHeight: 23,
+    textAlign: "center",
   },
-  returnText: {
-    color: colors.purple,
-    fontFamily: fonts.semibold,
-    fontSize: 13,
+  errorState: {
+    alignItems: "center",
+    marginTop: 28,
   },
   error: {
     color: colors.danger,
     fontFamily: fonts.regular,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
   },
   retryButton: {
-    alignSelf: "flex-start",
-    marginTop: 16,
-    borderRadius: radii.small,
-    backgroundColor: colors.purple,
+    marginTop: 12,
+    borderRadius: 12,
+    backgroundColor: rewardsColors.purple,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   retryText: {
-    color: colors.surface,
+    color: rewardsColors.surface,
     fontFamily: fonts.bold,
     fontSize: 13,
   },
-  retryButtonPressed: {
-    opacity: 0.75,
-  },
-  pressed: {
-    opacity: 0.55,
-  },
+  retryButtonPressed: { opacity: 0.76 },
+  pressed: { opacity: 0.68 },
 });

@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   },
   value: {
     color: colors.textPrimary,
-    fontFamily: fonts.extraBold,
+    fontFamily: fonts.display,
     fontSize: 54,
     fontVariant: ["tabular-nums"],
     letterSpacing: -3.4,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   v3Title: {
     color: v3Colors.ink,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.display,
     fontSize: 22,
     letterSpacing: -0.65,
   },

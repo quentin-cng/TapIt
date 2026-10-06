@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#ffffff",
-    fontFamily: fonts.bold,
+    fontFamily: fonts.display,
     fontSize: 37,
     letterSpacing: -2.1,
     lineHeight: 41,

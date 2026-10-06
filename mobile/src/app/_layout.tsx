@@ -1,3 +1,4 @@
+import { DMSerifDisplay_400Regular } from "@expo-google-fonts/dm-serif-display/400Regular";
 import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular";
 import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium";
 import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
@@ -174,6 +175,7 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
+    DMSerifDisplay_400Regular,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
@@ -226,7 +228,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     color: colors.textPrimary,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.display,
     fontSize: 26,
     letterSpacing: -1.2,
     textAlign: "center",

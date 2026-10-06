@@ -460,8 +460,68 @@ export function useProfileData(userId: string) {
     }
   }, []);
 
+  const deleteAccount = useCallback(
+    async (confirmation: string): Promise<ProfileMutationResult> => {
+      if (confirmation !== "DELETE") {
+        return {
+          status: "error",
+          message: "Type DELETE exactly to confirm account deletion.",
+        };
+      }
+
+      if (mutationsInFlight.current.has("delete-account")) {
+        return {
+          status: "error",
+          message: "Account deletion is already in progress.",
+        };
+      }
+
+      mutationsInFlight.current.add("delete-account");
+
+      try {
+        const { data: claimsData, error: claimsError } =
+          await supabase.auth.getClaims();
+
+        if (claimsError || !claimsData?.claims?.sub) {
+          return {
+            status: "error",
+            message: "Your session expired. Log in and try again.",
+          };
+        }
+
+        const { error: deleteError } = await supabase.rpc(
+          "delete_current_account",
+        );
+
+        if (deleteError) {
+          logMutationError("delete account", deleteError);
+          return {
+            status: "error",
+            message: "We couldn’t delete your account. Please try again.",
+          };
+        }
+
+        // The authenticated user has just been removed. auth-js still clears
+        // the local session if the remote global sign-out responds 401/404.
+        await supabase.auth.signOut({ scope: "global" });
+
+        return { status: "success", message: "Account deleted." };
+      } catch (failure) {
+        console.error("[mobile profile] account deletion failed", failure);
+        return {
+          status: "error",
+          message: "We couldn’t delete your account. Please try again.",
+        };
+      } finally {
+        mutationsInFlight.current.delete("delete-account");
+      }
+    },
+    [],
+  );
+
   return {
     data,
+    deleteAccount,
     error,
     isLoading,
     isRefreshing,

@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   ImageBackground,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -13,12 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { fonts } from "../../theme/tokens";
 
 const readerArtwork = require("../../../assets/illustrations/ready-to-tap-background.png");
-
-const displayFont = Platform.select({
-  android: "serif",
-  default: "Georgia",
-  ios: "Georgia",
-});
 
 function goBack() {
   if (router.canGoBack()) {
@@ -125,9 +118,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#fff2df",
-    fontFamily: displayFont,
+    fontFamily: fonts.display,
     fontSize: 42,
-    fontWeight: "700",
     letterSpacing: -1.5,
     lineHeight: 48,
     textAlign: "center",

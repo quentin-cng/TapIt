@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   title: {
     marginTop: 10,
     color: "#ffffff",
-    fontFamily: fonts.bold,
+    fontFamily: fonts.display,
     fontSize: 37,
     letterSpacing: -2.1,
     lineHeight: 41,
@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
   locationName: {
     marginTop: 10,
     color: "#ffffff",
-    fontFamily: fonts.bold,
+    fontFamily: fonts.display,
     fontSize: 42,
     letterSpacing: -2.5,
     lineHeight: 46,

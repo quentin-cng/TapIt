@@ -7,12 +7,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { colors, fonts, radii } from "../../theme/tokens";
+import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
 import type { IdentityMutationResult } from "./useProfileData";
 
 type ProfileIdentityEditorProps = {
   displayName: string;
-  onCancel: () => void;
   onSave: (
     displayName: string,
     username: string,
@@ -22,7 +21,6 @@ type ProfileIdentityEditorProps = {
 
 export function ProfileIdentityEditor({
   displayName: initialDisplayName,
-  onCancel,
   onSave,
   username: initialUsername,
 }: ProfileIdentityEditorProps) {
@@ -63,15 +61,6 @@ export function ProfileIdentityEditor({
             Your display name is what people see. Your username stays unique.
           </Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          disabled={isSaving}
-          hitSlop={8}
-          onPress={onCancel}
-          style={({ pressed }) => pressed && styles.pressed}
-        >
-          <Text style={styles.cancelText}>Close</Text>
-        </Pressable>
       </View>
 
       <View style={styles.fields}>
@@ -145,10 +134,9 @@ export function ProfileIdentityEditor({
 const styles = StyleSheet.create({
   container: {
     gap: 18,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: 20,
-    paddingBottom: 4,
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    paddingBottom: 24,
   },
   headingRow: {
     flexDirection: "row",
@@ -161,21 +149,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   title: {
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.bold,
-    fontSize: 17,
-    letterSpacing: -0.4,
+    fontSize: 23,
+    letterSpacing: -0.8,
   },
   copy: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 12,
     lineHeight: 18,
-  },
-  cancelText: {
-    color: colors.purple,
-    fontFamily: fonts.semibold,
-    fontSize: 12,
   },
   fields: {
     gap: 14,
@@ -191,11 +174,11 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 46,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: "#dfd1c2",
     borderRadius: radii.small,
-    backgroundColor: colors.surface,
+    backgroundColor: "#fffcf6",
     paddingHorizontal: 12,
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.regular,
     fontSize: 14,
   },
@@ -204,9 +187,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: "#dfd1c2",
     borderRadius: radii.small,
-    backgroundColor: colors.surface,
+    backgroundColor: "#fffcf6",
     paddingLeft: 12,
   },
   atSign: {
@@ -218,7 +201,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flex: 1,
     paddingHorizontal: 3,
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.regular,
     fontSize: 14,
   },
@@ -238,7 +221,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radii.small,
-    backgroundColor: colors.purple,
+    backgroundColor: v3Colors.ink,
     paddingHorizontal: 18,
   },
   saveButtonText: {

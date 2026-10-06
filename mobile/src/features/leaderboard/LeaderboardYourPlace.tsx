@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
+import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
+import { fonts } from "../../theme/tokens";
 import type {
   FriendsLeaderboardRow,
   GeneralLeaderboardRow,
@@ -7,104 +8,71 @@ import type {
 
 type PlacementRow = FriendsLeaderboardRow | GeneralLeaderboardRow;
 
-function getComparisonCopy(rows: PlacementRow[], currentIndex: number) {
-  const currentUser = rows[currentIndex];
-
-  if (currentIndex === 0 || currentUser.rank === 1) {
-    return "You’re leading.";
-  }
-
-  const userAbove = rows[currentIndex - 1];
-  const pointsGap = userAbove.totalPoints - currentUser.totalPoints;
-
-  if (pointsGap < 1) return null;
-
-  return `${new Intl.NumberFormat("en-CA").format(pointsGap)} ${pointsGap === 1 ? "pt" : "pts"} to pass ${userAbove.displayName}`;
-}
-
-export function LeaderboardYourPlace({ rows }: { rows: PlacementRow[] }) {
-  const currentIndex = rows.findIndex((row) => row.isCurrentUser);
-
-  if (currentIndex < 0) return null;
-
-  const currentUser = rows[currentIndex];
-  const comparisonCopy = getComparisonCopy(rows, currentIndex);
+export function LeaderboardYourPlace({ row }: { row: PlacementRow }) {
+  const identityKey = row.username ?? `${row.displayName}-${row.rank}`;
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.eyebrow}>Your place</Text>
-      <View style={styles.card}>
-        <Text style={styles.rank}>#{currentUser.rank}</Text>
-        <View style={styles.copy}>
-          <Text style={styles.title}>Your place</Text>
-          {comparisonCopy ? (
-            <Text numberOfLines={2} style={styles.comparison}>
-              {comparisonCopy}
-            </Text>
-          ) : null}
-        </View>
-        <Text style={styles.points}>
-          {new Intl.NumberFormat("en-CA").format(currentUser.totalPoints)}
-          <Text style={styles.pointsUnit}> pts</Text>
+    <View
+      accessibilityLabel={`Your rank is ${row.rank} with ${row.totalPoints} points`}
+      style={styles.row}
+    >
+      <Text style={styles.rank}>{row.rank}</Text>
+      <V3InitialAvatar
+        identityKey={identityKey}
+        name={row.displayName}
+        size="small"
+      />
+      <View style={styles.identity}>
+        <Text style={styles.name}>You</Text>
+        <Text numberOfLines={1} style={styles.secondary}>
+          Your place
         </Text>
       </View>
+      <Text style={styles.points}>
+        {new Intl.NumberFormat("en-CA").format(row.totalPoints)}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  section: {
-    marginTop: 18,
-  },
-  eyebrow: {
-    color: colors.textMuted,
-    fontFamily: fonts.bold,
-    fontSize: 9,
-    letterSpacing: 0.9,
-    textTransform: "uppercase",
-  },
-  card: {
-    minHeight: 74,
+  row: {
+    minHeight: 62,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginTop: 8,
-    borderRadius: radii.large,
-    backgroundColor: v3Colors.lavender,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    gap: 10,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: "#cfc0f6",
+    borderRadius: 17,
+    backgroundColor: "#f2edff",
+    paddingHorizontal: 10,
+    paddingVertical: 9,
   },
   rank: {
-    color: v3Colors.purple,
-    fontFamily: fonts.extraBold,
-    fontSize: 25,
+    width: 23,
+    color: "#5b3df6",
+    fontFamily: fonts.bold,
+    fontSize: 13,
     fontVariant: ["tabular-nums"],
-    letterSpacing: -1,
+    textAlign: "center",
   },
-  copy: {
-    minWidth: 0,
-    flex: 1,
-  },
-  title: {
-    color: v3Colors.ink,
+  identity: { minWidth: 0, flex: 1 },
+  name: {
+    color: "#1a1333",
     fontFamily: fonts.bold,
     fontSize: 13,
   },
-  comparison: {
-    marginTop: 3,
-    color: colors.textSecondary,
+  secondary: {
+    marginTop: 1,
+    color: "#777386",
     fontFamily: fonts.regular,
     fontSize: 9,
-    lineHeight: 13,
   },
   points: {
-    color: v3Colors.purple,
-    fontFamily: fonts.extraBold,
-    fontSize: 17,
+    color: "#5b3df6",
+    fontFamily: fonts.bold,
+    fontSize: 13,
     fontVariant: ["tabular-nums"],
-  },
-  pointsUnit: {
-    fontFamily: fonts.medium,
-    fontSize: 9,
   },
 });

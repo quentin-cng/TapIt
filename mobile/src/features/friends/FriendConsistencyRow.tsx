@@ -1,14 +1,18 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SessionDots } from "../../components/consistency/SessionDots";
-import {
-  getV3AvatarPalette,
-  V3InitialAvatar,
-} from "../../components/identity/V3InitialAvatar";
+import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
 import { resolveDisplayName } from "../../domain/profile-identity";
-import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
+import { colors, fonts } from "../../theme/tokens";
 import type { FriendView } from "./useFriendsData";
 
-const completedColor = "#16845a";
+const rowColors = {
+  ink: "#1a1333",
+  purple: "#5b3df6",
+  complete: "#16845a",
+  border: "#eadccd",
+  track: "#e9dece",
+  flame: "#ef6a33",
+} as const;
 
 export function FriendConsistencyRow({
   friend,
@@ -21,11 +25,13 @@ export function FriendConsistencyRow({
     friend.profile.display_name,
     friend.profile.username,
   );
-  const palette = getV3AvatarPalette(friend.profile.username);
   const stat = friend.weeklyStat;
   const isComplete = Boolean(
     stat?.currentGoal && stat.currentSessions >= stat.currentGoal,
   );
+  const progressWidth = stat?.currentGoal
+    ? (`${Math.min(100, Math.round((stat.currentSessions / stat.currentGoal) * 100))}%` as const)
+    : "0%";
 
   return (
     <Pressable
@@ -33,28 +39,51 @@ export function FriendConsistencyRow({
       accessibilityLabel={`${displayName}, @${friend.profile.username}`}
       accessibilityRole="button"
       onPress={() => onOpen(friend)}
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: palette.surface },
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <V3InitialAvatar
         identityKey={friend.profile.username}
         name={displayName}
+        size="small"
       />
-      <Text numberOfLines={1} style={styles.name}>
-        {displayName}
-      </Text>
-      <Text numberOfLines={1} style={styles.username}>
-        @{friend.profile.username}
-      </Text>
 
-      <View style={styles.progressBlock}>
+      <View style={styles.content}>
+        <View style={styles.identityRow}>
+          <View style={styles.identity}>
+            <Text numberOfLines={1} style={styles.name}>
+              {displayName}
+            </Text>
+            <Text numberOfLines={1} style={styles.username}>
+              @{friend.profile.username}
+            </Text>
+          </View>
+          {stat ? (
+            <View style={styles.streak}>
+              <MaterialCommunityIcons
+                color={rowColors.flame}
+                name="fire"
+                size={17}
+              />
+              <Text style={styles.streakValue}>
+                {stat.currentWeeklyGoalStreak}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
         {!stat ? (
           <Text style={styles.unavailable}>Progress unavailable</Text>
         ) : stat.currentGoal ? (
-          <>
+          <View style={styles.progressRow}>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  isComplete && styles.completeFill,
+                  { width: progressWidth },
+                ]}
+              />
+            </View>
             <Text
               style={[
                 styles.progressText,
@@ -63,86 +92,97 @@ export function FriendConsistencyRow({
             >
               {stat.currentSessions} / {stat.currentGoal}
             </Text>
-            <SessionDots
-              accentColor={isComplete ? completedColor : v3Colors.purple}
-              compact
-              completed={stat.currentSessions}
-              target={stat.currentGoal}
-              variant="v3"
-            />
-            <Text
-              style={[
-                styles.statusText,
-                isComplete && styles.completeText,
-              ]}
-            >
-              {isComplete ? "Goal complete" : "In progress"}
-            </Text>
-          </>
+          </View>
         ) : (
           <Text style={styles.unavailable}>No weekly goal</Text>
         )}
       </View>
+
+      <MaterialCommunityIcons
+        color={colors.textMuted}
+        name="chevron-right"
+        size={18}
+      />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    width: "48%",
-    minHeight: 190,
+  row: {
+    minHeight: 76,
+    flexDirection: "row",
     alignItems: "center",
-    borderRadius: radii.large,
-    paddingHorizontal: 12,
-    paddingVertical: 16,
+    gap: 11,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: rowColors.border,
+    paddingVertical: 11,
   },
+  content: { minWidth: 0, flex: 1 },
+  identityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  identity: { minWidth: 0, flex: 1 },
   name: {
-    width: "100%",
-    marginTop: 10,
-    color: v3Colors.ink,
+    color: rowColors.ink,
     fontFamily: fonts.bold,
-    fontSize: 13,
-    letterSpacing: -0.2,
-    textAlign: "center",
+    fontSize: 14,
+    letterSpacing: -0.25,
   },
   username: {
-    width: "100%",
-    marginTop: 2,
+    marginTop: 1,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 10,
-    textAlign: "center",
   },
-  progressBlock: {
-    width: "100%",
-    minHeight: 54,
-    marginTop: 11,
+  streak: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 6,
+    gap: 2,
   },
-  progressText: {
-    color: v3Colors.ink,
+  streakValue: {
+    minWidth: 14,
+    color: rowColors.ink,
     fontFamily: fonts.bold,
     fontSize: 12,
     fontVariant: ["tabular-nums"],
   },
-  statusText: {
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    fontSize: 9,
+  progressRow: {
+    marginTop: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
-  completeText: {
-    color: completedColor,
+  progressTrack: {
+    height: 8,
+    minWidth: 0,
+    flex: 1,
+    overflow: "hidden",
+    borderRadius: 4,
+    backgroundColor: rowColors.track,
   },
+  progressFill: {
+    height: "100%",
+    borderRadius: 4,
+    backgroundColor: rowColors.purple,
+  },
+  completeFill: { backgroundColor: rowColors.complete },
+  progressText: {
+    minWidth: 31,
+    color: rowColors.ink,
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+    fontVariant: ["tabular-nums"],
+    textAlign: "right",
+  },
+  completeText: { color: rowColors.complete },
   unavailable: {
+    marginTop: 7,
     color: colors.textMuted,
     fontFamily: fonts.medium,
     fontSize: 10,
-    textAlign: "center",
   },
-  pressed: {
-    opacity: 0.72,
-    transform: [{ scale: 0.985 }],
-  },
+  pressed: { opacity: 0.62 },
 });

@@ -25,6 +25,7 @@ export const v3Colors = {
 } as const;
 
 export const fonts = {
+  display: "DMSerifDisplay_400Regular",
   regular: "Inter_400Regular",
   medium: "Inter_500Medium",
   semibold: "Inter_600SemiBold",

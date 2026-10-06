@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -14,10 +14,12 @@ import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
 import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
 import { resolveDisplayName } from "../../domain/profile-identity";
-import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
+import { colors, fonts, radii } from "../../theme/tokens";
+import { PenguinProfileArtwork } from "../home/HomeArtwork";
 import { FriendActionButton } from "./FriendActionButton";
 import { FriendConsistencyRow } from "./FriendConsistencyRow";
 import { FriendDetailSheet } from "./FriendDetailSheet";
+import { FriendsSkeleton } from "./FriendsSkeleton";
 import {
   type FriendActionResult,
   type FriendView,
@@ -27,8 +29,55 @@ import {
   useFriendsData,
 } from "./useFriendsData";
 
-type FriendsTab = "friends" | "requests" | "sent";
 type ActionHandler = ReturnType<typeof useFriendsData>["performAction"];
+
+const friendsColors = {
+  background: "#fff8f1",
+  surface: "#fffcf6",
+  softSurface: "#f5eadc",
+  lavender: "#f2edff",
+  ink: "#1a1333",
+  purple: "#5b3df6",
+  aubergine: "#24143f",
+  border: "#eadccd",
+} as const;
+
+function FriendsHeader({ onAdd }: { onAdd: () => void }) {
+  return (
+    <View style={styles.header}>
+      <Pressable
+        accessibilityHint="Opens your account settings"
+        accessibilityLabel="Open Profile"
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={() => router.push("/profile")}
+        style={({ pressed }) => pressed && styles.pressed}
+      >
+        <PenguinProfileArtwork />
+      </Pressable>
+      <Text accessibilityRole="header" style={styles.title}>
+        Friends<Text style={styles.titlePeriod}>.</Text>
+      </Text>
+      <Pressable
+        accessibilityHint="Focuses friend search"
+        accessibilityLabel="Add friend"
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={onAdd}
+        style={({ pressed }) => [
+          styles.headerAction,
+          pressed && styles.pressed,
+        ]}
+      >
+        <MaterialCommunityIcons
+          color={friendsColors.ink}
+          name="account-plus-outline"
+          size={25}
+        />
+      </Pressable>
+    </View>
+  );
+}
 
 function IdentityLine({
   displayName,
@@ -82,13 +131,13 @@ function IncomingRequestRow({
       <View style={styles.requestActions}>
         <FriendActionButton
           entityId={request.id}
-          mode="accept"
+          mode="decline"
           onAction={onAction}
           onResult={onResult}
         />
         <FriendActionButton
           entityId={request.id}
-          mode="decline"
+          mode="accept"
           onAction={onAction}
           onResult={onResult}
         />
@@ -149,7 +198,6 @@ function SearchResultRow({
         identityKey={profile.username}
         username={profile.username}
       />
-
       {profile.relationship_status === "friends" ? (
         <Text style={[styles.relationshipStatus, styles.friendsStatus]}>
           Friends
@@ -180,26 +228,29 @@ function SearchResultRow({
   );
 }
 
-function EmptyState({ copy, title }: { copy: string; title: string }) {
+function EmptyState() {
   return (
     <View style={styles.emptyState}>
-      <View style={styles.emptyIcon}>
-        <MaterialCommunityIcons
-          color={v3Colors.purple}
-          name="account-multiple-outline"
-          size={25}
-        />
+      <MaterialCommunityIcons
+        color={friendsColors.purple}
+        name="account-multiple-outline"
+        size={28}
+      />
+      <View style={styles.emptyCopyBlock}>
+        <Text style={styles.emptyTitle}>No friends yet</Text>
+        <Text style={styles.emptyCopy}>
+          Find another TapIt member and start showing up together.
+        </Text>
       </View>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyCopy}>{copy}</Text>
     </View>
   );
 }
 
 export function FriendsScreen() {
   const { session } = useSession();
-  const [activeTab, setActiveTab] = useState<FriendsTab>("friends");
+  const searchInputRef = useRef<TextInput>(null);
   const [searchInput, setSearchInput] = useState("");
+  const [isAddAreaActive, setIsAddAreaActive] = useState(false);
   const [actionNotice, setActionNotice] = useState<FriendActionResult | null>(
     null,
   );
@@ -227,44 +278,51 @@ export function FriendsScreen() {
 
   const refreshControl = (
     <RefreshControl
-      colors={[v3Colors.purple]}
+      colors={[friendsColors.purple]}
       onRefresh={() => void refresh()}
       refreshing={isRefreshing}
-      tintColor={v3Colors.purple}
+      tintColor={friendsColors.purple}
     />
   );
 
+  function openAddFlow() {
+    setIsAddAreaActive(true);
+    requestAnimationFrame(() => searchInputRef.current?.focus());
+  }
+
   function submitSearch() {
     setActionNotice(null);
+    setIsAddAreaActive(true);
     void runSearch(searchInput);
   }
 
   function handleSearchInput(value: string) {
     setSearchInput(value);
-
-    if (!value.trim() && searchedQuery) {
-      void runSearch("");
-    }
+    if (!value.trim() && searchedQuery) void runSearch("");
   }
 
   if (isLoading && !data) {
     return (
-      <AppScreen refreshControl={refreshControl} showTopbar={false} variant="v3">
-        <View style={styles.loadingState}>
-          <ActivityIndicator
-            accessibilityLabel="Loading friends"
-            color={v3Colors.purple}
-            size="large"
-          />
-          <Text style={styles.loadingText}>Loading friends…</Text>
-        </View>
+      <AppScreen
+        backgroundColor={friendsColors.background}
+        refreshControl={refreshControl}
+        showTopbar={false}
+        variant="v3"
+      >
+        <FriendsSkeleton />
       </AppScreen>
     );
   }
 
   if (!data) {
     return (
-      <AppScreen refreshControl={refreshControl} showTopbar={false} variant="v3">
+      <AppScreen
+        backgroundColor={friendsColors.background}
+        refreshControl={refreshControl}
+        showTopbar={false}
+        variant="v3"
+      >
+        <FriendsHeader onAdd={() => undefined} />
         <View style={styles.errorState}>
           <Text accessibilityRole="header" style={styles.errorTitle}>
             Friends unavailable
@@ -287,114 +345,125 @@ export function FriendsScreen() {
 
   return (
     <>
-      <AppScreen refreshControl={refreshControl} showTopbar={false} variant="v3">
-        <Text accessibilityRole="header" style={styles.title}>
-          Friends.
-        </Text>
+      <AppScreen
+        backgroundColor={friendsColors.background}
+        refreshControl={refreshControl}
+        showTopbar={false}
+        variant="v3"
+      >
+        <FriendsHeader onAdd={openAddFlow} />
 
-        <View style={styles.searchField}>
-          <MaterialCommunityIcons
-            color={colors.textMuted}
-            name="magnify"
-            size={19}
-          />
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isSearching}
-            maxLength={30}
-            onChangeText={handleSearchInput}
-            onSubmitEditing={submitSearch}
-            placeholder="Search friends"
-            placeholderTextColor={colors.textMuted}
-            returnKeyType="search"
-            spellCheck={false}
-            style={styles.searchInput}
-            value={searchInput}
-          />
-          <Pressable
-            accessibilityLabel="Search friends"
-            accessibilityRole="button"
-            disabled={isSearching || !searchInput.trim()}
-            hitSlop={8}
-            onPress={submitSearch}
-            style={({ pressed }) => [
-              styles.searchAction,
-              (isSearching || !searchInput.trim()) && styles.disabled,
-              pressed && styles.pressed,
-            ]}
-          >
-            {isSearching ? (
-              <ActivityIndicator color={v3Colors.purple} size="small" />
-            ) : (
+        {isAddAreaActive ? (
+          <View style={styles.addArea}>
+            <View style={styles.searchField}>
               <MaterialCommunityIcons
-                color={v3Colors.purple}
-                name="arrow-right"
-                size={20}
+                color={colors.textMuted}
+                name="magnify"
+                size={18}
               />
-            )}
-          </Pressable>
-        </View>
-
-        <View style={styles.tabs}>
-          {(
-            [
-              ["friends", "Friends"],
-              ["requests", "Requests"],
-              ["sent", "Sent"],
-            ] as const
-          ).map(([tab, label]) => {
-            const isActive = activeTab === tab;
-
-            return (
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isSearching}
+                maxLength={30}
+                onChangeText={handleSearchInput}
+                onSubmitEditing={submitSearch}
+                placeholder="Search friends..."
+                placeholderTextColor={colors.textMuted}
+                ref={searchInputRef}
+                returnKeyType="search"
+                spellCheck={false}
+                style={styles.searchInput}
+                value={searchInput}
+              />
               <Pressable
-                accessibilityRole="tab"
-                accessibilityState={{ selected: isActive }}
-                key={tab}
-                onPress={() => setActiveTab(tab)}
+                accessibilityLabel="Search friends"
+                accessibilityRole="button"
+                disabled={isSearching || !searchInput.trim()}
+                hitSlop={8}
+                onPress={submitSearch}
                 style={({ pressed }) => [
-                  styles.tab,
-                  isActive && styles.activeTab,
+                  styles.searchAction,
+                  (isSearching || !searchInput.trim()) && styles.disabled,
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={[styles.tabLabel, isActive && styles.activeTabLabel]}>
-                  {label}
-                </Text>
-                {tab === "requests" && data.incomingRequests.length > 0 ? (
-                  <View style={styles.requestBadge}>
-                    <Text style={styles.requestBadgeText}>
-                      {data.incomingRequests.length}
-                    </Text>
-                  </View>
-                ) : null}
+                {isSearching ? (
+                  <ActivityIndicator color={friendsColors.purple} size="small" />
+                ) : (
+                  <MaterialCommunityIcons
+                    color={friendsColors.purple}
+                    name="arrow-right"
+                    size={19}
+                  />
+                )}
               </Pressable>
-            );
-          })}
-        </View>
+            </View>
 
-        {searchError ? (
-          <Text accessibilityRole="alert" style={styles.fieldError}>
-            {searchError}
-          </Text>
-        ) : searchedQuery && !isSearching && searchProfiles.length === 0 ? (
-          <View style={styles.searchEmpty}>
-            <Text style={styles.searchEmptyTitle}>No matching users</Text>
-            <Text style={styles.searchEmptyCopy}>
-              Check the username and try again.
-            </Text>
+            {searchError ? (
+              <Text accessibilityRole="alert" style={styles.fieldError}>
+                {searchError}
+              </Text>
+            ) : searchedQuery && !isSearching && searchProfiles.length === 0 ? (
+              <View style={styles.searchEmpty}>
+                <Text style={styles.searchEmptyTitle}>No matching users</Text>
+                <Text style={styles.searchEmptyCopy}>
+                  Check the username and try again.
+                </Text>
+              </View>
+            ) : null}
+
+            {searchProfiles.length > 0 ? (
+              <View style={styles.searchResults}>
+                <Text style={styles.eyebrow}>Search results</Text>
+                {searchProfiles.map((profile) => (
+                  <SearchResultRow
+                    key={profile.username}
+                    onAction={performAction}
+                    onResult={setActionNotice}
+                    profile={profile}
+                  />
+                ))}
+              </View>
+            ) : null}
+
+            {data.outgoingRequests.length > 0 ? (
+              <View style={styles.sentRequests}>
+                <View style={styles.sectionHeading}>
+                  <Text style={styles.sectionTitle}>Sent requests</Text>
+                  <Text style={styles.sectionCount}>
+                    {data.outgoingRequests.length}
+                  </Text>
+                </View>
+                {data.outgoingRequests.map((request) => (
+                  <OutgoingRequestRow
+                    key={request.id}
+                    onAction={performAction}
+                    onResult={setActionNotice}
+                    request={request}
+                  />
+                ))}
+              </View>
+            ) : null}
           </View>
         ) : null}
 
-        {searchProfiles.length > 0 ? (
-          <View style={styles.searchResults}>
-            <Text style={styles.resultsLabel}>Search results</Text>
-            {searchProfiles.map((profile) => (
-              <SearchResultRow
-                key={profile.username}
+        {data.incomingRequests.length > 0 ? (
+          <View style={styles.requestSection}>
+            <View style={styles.sectionHeading}>
+              <Text style={styles.sectionTitle}>Friend requests</Text>
+              <View style={styles.requestBadge}>
+                <Text style={styles.requestBadgeText}>
+                  {data.incomingRequests.length}
+                </Text>
+              </View>
+            </View>
+            {data.incomingRequests.map((request) => (
+              <IncomingRequestRow
+                key={request.id}
                 onAction={performAction}
                 onResult={setActionNotice}
-                profile={profile}
+                request={request}
               />
             ))}
           </View>
@@ -420,60 +489,38 @@ export function FriendsScreen() {
           </Text>
         ) : null}
 
-        <View style={styles.tabContent}>
-          {activeTab === "friends" ? (
-            data.friends.length > 0 ? (
-              <View style={styles.friendGrid}>
-                {data.friends.map((friend) => (
-                  <FriendConsistencyRow
-                    friend={friend}
-                    key={friend.profile.profile_id}
-                    onOpen={setSelectedFriend}
-                  />
-                ))}
-              </View>
-            ) : (
-              <EmptyState
-                copy="Search for another TapIt member to send a friend request."
-                title="No friends yet"
-              />
-            )
-          ) : activeTab === "requests" ? (
-            data.incomingRequests.length > 0 ? (
-              <View style={styles.relationshipList}>
-                {data.incomingRequests.map((request) => (
-                  <IncomingRequestRow
-                    key={request.id}
-                    onAction={performAction}
-                    onResult={setActionNotice}
-                    request={request}
-                  />
-                ))}
-              </View>
-            ) : (
-              <EmptyState
-                copy="New friend requests will appear here."
-                title="No requests"
-              />
-            )
-          ) : data.outgoingRequests.length > 0 ? (
-            <View style={styles.relationshipList}>
-              {data.outgoingRequests.map((request) => (
-                <OutgoingRequestRow
-                  key={request.id}
-                  onAction={performAction}
-                  onResult={setActionNotice}
-                  request={request}
+        <View style={styles.friendsSection}>
+          {data.friends.length > 0 ? (
+            <View style={styles.friendList}>
+              {data.friends.map((friend) => (
+                <FriendConsistencyRow
+                  friend={friend}
+                  key={friend.profile.profile_id}
+                  onOpen={setSelectedFriend}
                 />
               ))}
             </View>
           ) : (
-            <EmptyState
-              copy="Friend requests you send will appear here until they respond."
-              title="No sent requests"
-            />
+            <EmptyState />
           )}
         </View>
+
+        <Pressable
+          accessibilityHint="Focuses friend search"
+          accessibilityRole="button"
+          onPress={openAddFlow}
+          style={({ pressed }) => [
+            styles.addFriendsButton,
+            pressed && styles.addFriendsButtonPressed,
+          ]}
+        >
+          <MaterialCommunityIcons
+            color={friendsColors.surface}
+            name="account-plus-outline"
+            size={22}
+          />
+          <Text style={styles.addFriendsLabel}>Add friends</Text>
+        </Pressable>
       </AppScreen>
 
       <FriendDetailSheet
@@ -490,28 +537,46 @@ export function FriendsScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    marginBottom: 17,
-    color: v3Colors.ink,
-    fontFamily: fonts.extraBold,
-    fontSize: 38,
-    letterSpacing: -2.1,
-    lineHeight: 42,
-  },
-  searchField: {
-    minHeight: 44,
+  header: {
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
-    gap: 9,
-    borderRadius: 22,
-    backgroundColor: "#f0edf4",
+    justifyContent: "space-between",
+    marginBottom: 15,
+  },
+  title: {
+    position: "absolute",
+    right: 52,
+    left: 52,
+    color: friendsColors.ink,
+    fontFamily: fonts.display,
+    fontSize: 29,
+    letterSpacing: -1,
+    textAlign: "center",
+  },
+  titlePeriod: { color: friendsColors.purple },
+  headerAction: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 20,
+  },
+  addArea: { marginTop: 2 },
+  searchField: {
+    minHeight: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 21,
+    backgroundColor: friendsColors.softSurface,
     paddingLeft: 14,
-    paddingRight: 8,
+    paddingRight: 7,
   },
   searchInput: {
     minWidth: 0,
     flex: 1,
-    color: v3Colors.ink,
+    color: friendsColors.ink,
     fontFamily: fonts.regular,
     fontSize: 13,
     paddingVertical: 0,
@@ -523,61 +588,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 16,
   },
-  tabs: {
-    marginTop: 16,
-    flexDirection: "row",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  tab: {
-    minHeight: 42,
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  activeTab: {
-    borderBottomColor: v3Colors.purple,
-  },
-  tabLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.semibold,
-    fontSize: 12,
-  },
-  activeTabLabel: {
-    color: v3Colors.purple,
-  },
-  requestBadge: {
-    minWidth: 17,
-    height: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 9,
-    backgroundColor: "#ef4055",
-    paddingHorizontal: 4,
-  },
-  requestBadgeText: {
-    color: colors.surface,
-    fontFamily: fonts.bold,
-    fontSize: 9,
-  },
   fieldError: {
-    marginTop: 10,
+    marginTop: 9,
     color: colors.danger,
     fontFamily: fonts.regular,
     fontSize: 11,
   },
   searchEmpty: {
-    marginTop: 14,
+    marginTop: 12,
     borderRadius: radii.medium,
-    backgroundColor: v3Colors.lavender,
-    padding: 14,
+    backgroundColor: friendsColors.lavender,
+    padding: 13,
   },
   searchEmptyTitle: {
-    color: v3Colors.ink,
+    color: friendsColors.ink,
     fontFamily: fonts.semibold,
     fontSize: 13,
   },
@@ -588,13 +612,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   searchResults: {
-    marginTop: 15,
-    borderRadius: radii.large,
-    backgroundColor: colors.surface,
+    marginTop: 14,
+    borderRadius: 16,
+    backgroundColor: friendsColors.surface,
     paddingHorizontal: 13,
     paddingTop: 12,
   },
-  resultsLabel: {
+  eyebrow: {
     color: colors.textMuted,
     fontFamily: fonts.bold,
     fontSize: 9,
@@ -602,18 +626,16 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   searchResultRow: {
-    minHeight: 64,
+    minHeight: 62,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingVertical: 10,
+    borderBottomColor: friendsColors.border,
+    paddingVertical: 9,
   },
-  searchActionState: {
-    alignItems: "flex-end",
-  },
+  searchActionState: { alignItems: "flex-end" },
   relationshipStatus: {
     maxWidth: 92,
     color: colors.textSecondary,
@@ -621,8 +643,81 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: "right",
   },
-  friendsStatus: {
-    color: colors.success,
+  friendsStatus: { color: colors.success },
+  sentRequests: { marginTop: 17 },
+  requestSection: {
+    marginTop: 18,
+    borderRadius: 18,
+    backgroundColor: friendsColors.lavender,
+    paddingHorizontal: 13,
+    paddingTop: 13,
+  },
+  sectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sectionTitle: {
+    color: friendsColors.ink,
+    fontFamily: fonts.bold,
+    fontSize: 14,
+  },
+  sectionCount: {
+    color: colors.textSecondary,
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+  },
+  requestBadge: {
+    minWidth: 19,
+    height: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    backgroundColor: "#ef4055",
+    paddingHorizontal: 5,
+  },
+  requestBadgeText: {
+    color: friendsColors.surface,
+    fontFamily: fonts.bold,
+    fontSize: 10,
+  },
+  identityLine: {
+    minWidth: 0,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  identityText: { minWidth: 0, flex: 1, gap: 2 },
+  identityName: {
+    color: friendsColors.ink,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+  },
+  username: {
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 10,
+  },
+  relationshipRow: {
+    minHeight: 68,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: friendsColors.border,
+    paddingVertical: 9,
+  },
+  requestActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  sentAction: { alignItems: "flex-end" },
+  pendingLabel: {
+    color: colors.textSecondary,
+    fontFamily: fonts.medium,
+    fontSize: 10,
   },
   inlineError: {
     marginTop: 13,
@@ -637,118 +732,58 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 17,
   },
-  noticeError: {
-    color: colors.danger,
-  },
-  noticeSuccess: {
-    color: colors.success,
-  },
-  tabContent: {
-    marginTop: 16,
-  },
-  friendGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 11,
-  },
-  identityLine: {
-    minWidth: 0,
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  identityText: {
-    minWidth: 0,
-    flex: 1,
-    gap: 2,
-  },
-  identityName: {
-    color: v3Colors.ink,
-    fontFamily: fonts.semibold,
-    fontSize: 13,
-  },
-  username: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 10,
-  },
-  relationshipList: {
+  noticeError: { color: colors.danger },
+  noticeSuccess: { color: colors.success },
+  friendsSection: { marginTop: 20 },
+  friendList: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  relationshipRow: {
-    minHeight: 78,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingVertical: 12,
-  },
-  requestActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  sentAction: {
-    alignItems: "flex-end",
-  },
-  pendingLabel: {
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    fontSize: 10,
+    borderTopColor: friendsColors.border,
   },
   emptyState: {
+    minHeight: 92,
+    flexDirection: "row",
     alignItems: "center",
-    borderRadius: radii.large,
-    backgroundColor: v3Colors.lavender,
-    paddingHorizontal: 22,
-    paddingVertical: 30,
+    gap: 13,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: friendsColors.border,
+    paddingVertical: 18,
   },
-  emptyIcon: {
-    width: 48,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 24,
-    backgroundColor: v3Colors.lavenderStrong,
-  },
+  emptyCopyBlock: { minWidth: 0, flex: 1 },
   emptyTitle: {
-    marginTop: 11,
-    color: v3Colors.ink,
+    color: friendsColors.ink,
     fontFamily: fonts.semibold,
     fontSize: 14,
   },
   emptyCopy: {
-    maxWidth: 260,
-    marginTop: 4,
+    marginTop: 3,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 11,
     lineHeight: 17,
-    textAlign: "center",
   },
-  loadingState: {
-    flex: 1,
-    minHeight: 420,
+  addFriendsButton: {
+    minHeight: 54,
+    marginTop: 20,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 10,
+    borderRadius: 20,
+    backgroundColor: friendsColors.aubergine,
+    paddingHorizontal: 20,
   },
-  loadingText: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 14,
+  addFriendsButtonPressed: { opacity: 0.86 },
+  addFriendsLabel: {
+    color: friendsColors.surface,
+    fontFamily: fonts.semibold,
+    fontSize: 16,
   },
-  errorState: {
-    paddingTop: 24,
-  },
+  errorState: { paddingTop: 24 },
   errorTitle: {
-    color: v3Colors.ink,
-    fontFamily: fonts.bold,
+    color: friendsColors.ink,
+    fontFamily: fonts.display,
     fontSize: 28,
-    letterSpacing: -1.2,
+    letterSpacing: -1,
   },
   errorCopy: {
     marginTop: 10,
@@ -761,19 +796,15 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 20,
     borderRadius: radii.small,
-    backgroundColor: v3Colors.purple,
+    backgroundColor: friendsColors.purple,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
   retryButtonText: {
-    color: colors.surface,
+    color: friendsColors.surface,
     fontFamily: fonts.bold,
     fontSize: 14,
   },
-  disabled: {
-    opacity: 0.4,
-  },
-  pressed: {
-    opacity: 0.68,
-  },
+  disabled: { opacity: 0.4 },
+  pressed: { opacity: 0.68 },
 });

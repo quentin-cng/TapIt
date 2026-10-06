@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   summaryNumber: {
     color: colors.textPrimary,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.display,
     fontSize: 34,
     letterSpacing: -1.5,
   },

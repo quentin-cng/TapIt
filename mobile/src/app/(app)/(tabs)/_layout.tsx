@@ -63,13 +63,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="recap"
+        name="rewards"
         options={{
-          title: "Recap",
+          title: "Rewards",
           tabBarIcon: ({ color, focused, size }) => (
             <MaterialCommunityIcons
               color={color}
-              name={focused ? "calendar-week" : "calendar-week-outline"}
+              name={focused ? "gift" : "gift-outline"}
               size={size}
             />
           ),

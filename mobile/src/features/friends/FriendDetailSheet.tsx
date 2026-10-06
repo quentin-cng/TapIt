@@ -1,6 +1,8 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   Modal,
   Pressable,
   ScrollView,
@@ -34,6 +36,33 @@ export function FriendDetailSheet({
   onRemoved: (result: FriendActionResult) => void;
 }) {
   const [removalError, setRemovalError] = useState("");
+  const [backdropOpacity] = useState(() => new Animated.Value(0));
+  const [sheetTranslateY] = useState(() => new Animated.Value(72));
+  const isClosing = useRef(false);
+  const friendId = friend?.profile.profile_id ?? null;
+
+  useEffect(() => {
+    if (!friendId) return;
+
+    isClosing.current = false;
+    backdropOpacity.setValue(0);
+    sheetTranslateY.setValue(72);
+
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        duration: 150,
+        easing: Easing.out(Easing.quad),
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sheetTranslateY, {
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [backdropOpacity, friendId, sheetTranslateY]);
 
   if (!friend) return null;
 
@@ -46,31 +75,66 @@ export function FriendDetailSheet({
     stat?.currentGoal && stat.currentSessions >= stat.currentGoal,
   );
 
+  function animateOut(onFinished: () => void) {
+    if (isClosing.current) return;
+    isClosing.current = true;
+
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        duration: 160,
+        easing: Easing.in(Easing.quad),
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sheetTranslateY, {
+        duration: 210,
+        easing: Easing.in(Easing.cubic),
+        toValue: 72,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      isClosing.current = false;
+      onFinished();
+    });
+  }
+
   function close() {
-    setRemovalError("");
-    onClose();
+    animateOut(() => {
+      setRemovalError("");
+      onClose();
+    });
   }
 
   return (
     <Modal
-      animationType="slide"
+      animationType="none"
       onRequestClose={close}
       statusBarTranslucent
       transparent
       visible
     >
       <View style={styles.backdrop}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.backdropDim, { opacity: backdropOpacity }]}
+        />
         <Pressable
           accessibilityLabel="Close friend details"
           accessibilityRole="button"
           onPress={close}
           style={StyleSheet.absoluteFill}
         />
-        <SafeAreaView edges={["bottom"]} style={styles.sheetSafeArea}>
-          <ScrollView
-            contentContainerStyle={styles.sheet}
-            showsVerticalScrollIndicator={false}
-          >
+        <Animated.View
+          style={[
+            styles.sheetContainer,
+            { transform: [{ translateY: sheetTranslateY }] },
+          ]}
+        >
+          <SafeAreaView edges={["bottom"]} style={styles.sheetSafeArea}>
+            <ScrollView
+              contentContainerStyle={styles.sheet}
+              showsVerticalScrollIndicator={false}
+            >
             <View style={styles.handle} />
             <Pressable
               accessibilityLabel="Close friend details"
@@ -180,8 +244,10 @@ export function FriendDetailSheet({
                 onAction={onAction}
                 onResult={(result) => {
                   if (result.status === "success") {
-                    setRemovalError("");
-                    onRemoved(result);
+                    animateOut(() => {
+                      setRemovalError("");
+                      onRemoved(result);
+                    });
                   } else {
                     setRemovalError(result.message);
                   }
@@ -194,8 +260,9 @@ export function FriendDetailSheet({
                 </Text>
               ) : null}
             </View>
-          </ScrollView>
-        </SafeAreaView>
+            </ScrollView>
+          </SafeAreaView>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -205,10 +272,20 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     justifyContent: "flex-end",
+  },
+  backdropDim: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: "rgba(36, 20, 63, 0.36)",
   },
-  sheetSafeArea: {
+  sheetContainer: {
     maxHeight: "82%",
+  },
+  sheetSafeArea: {
+    maxHeight: "100%",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     backgroundColor: colors.background,
@@ -245,7 +322,7 @@ const styles = StyleSheet.create({
   name: {
     marginTop: 12,
     color: v3Colors.ink,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.display,
     fontSize: 24,
     letterSpacing: -1,
     textAlign: "center",
@@ -284,7 +361,7 @@ const styles = StyleSheet.create({
   statValue: {
     maxWidth: "80%",
     color: v3Colors.purple,
-    fontFamily: fonts.extraBold,
+    fontFamily: fonts.display,
     fontSize: 22,
     fontVariant: ["tabular-nums"],
     letterSpacing: -0.8,

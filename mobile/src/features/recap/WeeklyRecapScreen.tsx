@@ -1,15 +1,16 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
+import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
 import { formatPreviousWeekRange } from "../../domain/recap-week";
 import {
   getWeeklyRecapMessage,
@@ -17,8 +18,59 @@ import {
 } from "../../domain/social-weekly";
 import { colors, fonts, radii } from "../../theme/tokens";
 import { useWeeklyRecapData } from "./useWeeklyRecapData";
+import { WeeklyRecapSkeleton } from "./WeeklyRecapSkeleton";
 
 type ResultStatus = "hit" | "missed";
+
+const recapColors = {
+  background: "#fff8f1",
+  surface: "#fffcf6",
+  ink: "#1a1333",
+  purple: "#5b3df6",
+  purpleDark: "#24143f",
+  lavender: "#f2edff",
+  lavenderBorder: "#ddd1f8",
+  peach: "#fff0e5",
+  peachBorder: "#f3d4bd",
+  orange: "#b85d37",
+  border: "#eadccd",
+} as const;
+
+function RecapHeader() {
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/");
+    }
+  };
+
+  return (
+    <View style={styles.header}>
+      <Pressable
+        accessibilityHint="Returns to the previous screen"
+        accessibilityLabel="Go back"
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={goBack}
+        style={({ pressed }) => [
+          styles.backButton,
+          pressed && styles.pressed,
+        ]}
+      >
+        <MaterialCommunityIcons
+          color={recapColors.ink}
+          name="arrow-left"
+          size={23}
+        />
+      </Pressable>
+      <Text accessibilityRole="header" style={styles.headerTitle}>
+        Recap<Text style={styles.titlePeriod}>.</Text>
+      </Text>
+      <View style={styles.headerBalance} />
+    </View>
+  );
+}
 
 function RecapPersonRow({
   currentUserId,
@@ -33,21 +85,28 @@ function RecapPersonRow({
 
   return (
     <View style={[styles.personRow, isCurrentUser && styles.currentUserRow]}>
-      <View
-        accessibilityElementsHidden
-        style={[
-          styles.statusMark,
-          status === "missed" && styles.statusMarkMissed,
-        ]}
-      >
-        <Text
+      <View style={styles.avatarWrap}>
+        <V3InitialAvatar
+          identityKey={stat.username}
+          name={stat.displayName}
+          size="small"
+        />
+        <View
+          accessibilityElementsHidden
           style={[
-            styles.statusMarkText,
-            status === "missed" && styles.statusMarkTextMissed,
+            styles.statusMark,
+            status === "missed" && styles.statusMarkMissed,
           ]}
         >
-          {status === "hit" ? "✓" : "•"}
-        </Text>
+          <Text
+            style={[
+              styles.statusMarkText,
+              status === "missed" && styles.statusMarkTextMissed,
+            ]}
+          >
+            {status === "hit" ? "✓" : "•"}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.identity}>
@@ -93,7 +152,7 @@ function ResultSection({
       ]}
     >
       <View style={styles.sectionHeading}>
-        <View>
+        <View style={styles.sectionCopy}>
           <Text
             style={[
               styles.sectionLabel,
@@ -147,6 +206,11 @@ function BestStreakSection({ stats }: { stats: SocialWeeklyStat[] }) {
       <View style={styles.streakList}>
         {stats.map((stat) => (
           <View key={stat.userId} style={styles.streakRow}>
+            <V3InitialAvatar
+              identityKey={stat.username}
+              name={stat.displayName}
+              size="small"
+            />
             <View style={styles.streakIdentity}>
               <Text numberOfLines={1} style={styles.streakName}>
                 {stat.displayName}
@@ -178,31 +242,35 @@ export function WeeklyRecapScreen() {
 
   const refreshControl = (
     <RefreshControl
-      colors={[colors.purple]}
+      colors={[recapColors.purple]}
       onRefresh={() => void refresh()}
       refreshing={isRefreshing}
-      tintColor={colors.purple}
+      tintColor={recapColors.purple}
     />
   );
 
   if (isLoading && !data) {
     return (
-      <AppScreen refreshControl={refreshControl}>
-        <View style={styles.loadingState}>
-          <ActivityIndicator
-            accessibilityLabel="Loading weekly recap"
-            color={colors.purple}
-            size="large"
-          />
-          <Text style={styles.loadingText}>Loading weekly recap…</Text>
-        </View>
+      <AppScreen
+        backgroundColor={recapColors.background}
+        refreshControl={refreshControl}
+        showTopbar={false}
+        variant="v3"
+      >
+        <WeeklyRecapSkeleton />
       </AppScreen>
     );
   }
 
   if (!data) {
     return (
-      <AppScreen refreshControl={refreshControl}>
+      <AppScreen
+        backgroundColor={recapColors.background}
+        refreshControl={refreshControl}
+        showTopbar={false}
+        variant="v3"
+      >
+        <RecapHeader />
         <View style={styles.errorState}>
           <Text accessibilityRole="header" style={styles.errorTitle}>
             Recap unavailable
@@ -227,14 +295,20 @@ export function WeeklyRecapScreen() {
     data.recap.goalsHit.length > 0 || data.recap.goalsMissed.length > 0;
 
   return (
-    <AppScreen refreshControl={refreshControl}>
-      <Text style={styles.eyebrow}>Last week</Text>
-      <Text accessibilityRole="header" style={styles.title}>
-        Weekly Recap
-      </Text>
-      <Text style={styles.weekRange}>
-        {formatPreviousWeekRange(data.previousWeekStart)}
-      </Text>
+    <AppScreen
+      backgroundColor={recapColors.background}
+      refreshControl={refreshControl}
+      showTopbar={false}
+      variant="v3"
+    >
+      <RecapHeader />
+
+      <View style={styles.weekHeading}>
+        <Text style={styles.eyebrow}>Last week</Text>
+        <Text style={styles.weekRange}>
+          {formatPreviousWeekRange(data.previousWeekStart)}
+        </Text>
+      </View>
 
       {hasGoalResults ? (
         <View style={styles.results}>
@@ -263,118 +337,144 @@ export function WeeklyRecapScreen() {
 }
 
 const styles = StyleSheet.create({
+  header: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 15,
+  },
+  headerTitle: {
+    position: "absolute",
+    right: 46,
+    left: 46,
+    color: recapColors.ink,
+    fontFamily: fonts.display,
+    fontSize: 29,
+    letterSpacing: -1,
+    textAlign: "center",
+  },
+  titlePeriod: { color: recapColors.purple },
+  backButton: {
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: recapColors.border,
+    borderRadius: 19,
+    backgroundColor: recapColors.surface,
+  },
+  headerBalance: { width: 38, height: 38 },
+  weekHeading: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    paddingHorizontal: 2,
+  },
   eyebrow: {
-    color: colors.purple,
+    color: recapColors.purple,
     fontFamily: fonts.bold,
     fontSize: 11,
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
     textTransform: "uppercase",
   },
-  title: {
-    marginTop: 7,
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 46,
-    letterSpacing: -2.8,
-    lineHeight: 49,
-  },
   weekRange: {
-    marginTop: 10,
     color: colors.textSecondary,
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: 12,
   },
-  results: {
-    gap: 18,
-    marginTop: 32,
-  },
+  results: { gap: 14, marginTop: 18 },
   resultSection: {
+    overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 16,
-    paddingTop: 18,
+    borderRadius: 22,
+    paddingHorizontal: 15,
+    paddingTop: 16,
   },
   hitSection: {
-    borderColor: "#bddfc9",
-    backgroundColor: "#f5fbf7",
+    borderColor: recapColors.lavenderBorder,
+    backgroundColor: recapColors.lavender,
   },
   missedSection: {
-    borderColor: "#edc8ce",
-    backgroundColor: "#fff7f8",
+    borderColor: recapColors.peachBorder,
+    backgroundColor: recapColors.peach,
   },
   sectionHeading: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 16,
-    paddingBottom: 14,
+    paddingBottom: 13,
   },
+  sectionCopy: { minWidth: 0, flex: 1 },
   sectionLabel: {
     fontFamily: fonts.bold,
     fontSize: 10,
     letterSpacing: 1,
     textTransform: "uppercase",
   },
-  hitText: {
-    color: colors.success,
-  },
-  missedText: {
-    color: colors.danger,
-  },
+  hitText: { color: recapColors.purple },
+  missedText: { color: recapColors.orange },
   sectionTitle: {
     marginTop: 5,
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 17,
+    color: recapColors.ink,
+    fontFamily: fonts.display,
+    fontSize: 19,
     letterSpacing: -0.45,
   },
   groupCount: {
-    fontFamily: fonts.bold,
-    fontSize: 14,
+    fontFamily: fonts.display,
+    fontSize: 25,
     fontVariant: ["tabular-nums"],
+    lineHeight: 28,
   },
   peopleList: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: recapColors.border,
   },
   personRow: {
-    minHeight: 66,
+    minHeight: 68,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingVertical: 11,
+    borderBottomColor: recapColors.border,
+    paddingVertical: 10,
   },
   currentUserRow: {
-    borderLeftWidth: 3,
-    borderLeftColor: colors.purple,
-    backgroundColor: "#f1edfb",
-    paddingLeft: 7,
+    marginHorizontal: -7,
+    borderLeftWidth: 2,
+    borderLeftColor: recapColors.purple,
+    backgroundColor: "rgba(255, 252, 246, 0.62)",
+    paddingHorizontal: 7,
   },
+  avatarWrap: { position: "relative" },
   statusMark: {
-    width: 26,
-    height: 26,
+    position: "absolute",
+    right: -3,
+    bottom: -2,
+    width: 16,
+    height: 16,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 13,
-    backgroundColor: "#e8f4ed",
+    borderWidth: 2,
+    borderColor: recapColors.lavender,
+    borderRadius: 8,
+    backgroundColor: recapColors.purple,
   },
   statusMarkMissed: {
-    backgroundColor: "#f9e9ec",
+    borderColor: recapColors.peach,
+    backgroundColor: recapColors.orange,
   },
   statusMarkText: {
-    color: colors.success,
+    color: recapColors.surface,
     fontFamily: fonts.bold,
-    fontSize: 13,
+    fontSize: 8,
+    lineHeight: 9,
   },
-  statusMarkTextMissed: {
-    color: colors.danger,
-  },
-  identity: {
-    minWidth: 0,
-    flex: 1,
-    gap: 4,
-  },
+  statusMarkTextMissed: { color: recapColors.surface },
+  identity: { minWidth: 0, flex: 1, gap: 2 },
   identityLine: {
     minWidth: 0,
     flexDirection: "row",
@@ -383,130 +483,109 @@ const styles = StyleSheet.create({
   },
   displayName: {
     flexShrink: 1,
-    color: colors.textPrimary,
+    color: recapColors.ink,
     fontFamily: fonts.semibold,
     fontSize: 13,
   },
   username: {
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 11,
+    fontSize: 10,
   },
   youLabel: {
-    borderRadius: radii.small,
-    backgroundColor: colors.purple,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    color: colors.surface,
+    borderRadius: 8,
+    backgroundColor: recapColors.purple,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    color: recapColors.surface,
     fontFamily: fonts.bold,
-    fontSize: 8,
+    fontSize: 7,
     textTransform: "uppercase",
   },
-  progress: {
-    alignItems: "flex-end",
-    gap: 2,
-  },
+  progress: { alignItems: "flex-end", gap: 1 },
   progressValue: {
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 13,
+    color: recapColors.ink,
+    fontFamily: fonts.display,
+    fontSize: 18,
     fontVariant: ["tabular-nums"],
   },
   progressLabel: {
     color: colors.textSecondary,
     fontFamily: fonts.medium,
-    fontSize: 9,
-    letterSpacing: 0.6,
+    fontSize: 8,
+    letterSpacing: 0.5,
     textTransform: "uppercase",
   },
   emptyGroup: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingVertical: 18,
+    borderTopColor: recapColors.border,
+    paddingVertical: 17,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 12,
   },
   commentary: {
-    marginTop: 24,
+    marginTop: 18,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    paddingVertical: 18,
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 20,
+    borderColor: recapColors.border,
+    paddingVertical: 16,
+    color: recapColors.ink,
+    fontFamily: fonts.display,
+    fontSize: 18,
+    lineHeight: 25,
   },
   streakSection: {
-    marginTop: 24,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    paddingVertical: 20,
+    marginTop: 18,
+    borderRadius: 20,
+    backgroundColor: recapColors.surface,
+    paddingHorizontal: 15,
+    paddingTop: 16,
   },
   streakEyebrow: {
-    color: colors.purple,
+    color: recapColors.purple,
     fontFamily: fonts.bold,
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 1,
     textTransform: "uppercase",
   },
   streakTitle: {
     marginTop: 5,
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
-    fontSize: 18,
+    color: recapColors.ink,
+    fontFamily: fonts.display,
+    fontSize: 19,
     letterSpacing: -0.5,
   },
-  streakList: {
-    marginTop: 14,
-  },
+  streakList: { marginTop: 11 },
   streakRow: {
-    minHeight: 58,
+    minHeight: 62,
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingVertical: 11,
+    borderTopColor: recapColors.border,
+    paddingVertical: 10,
   },
-  streakIdentity: {
-    minWidth: 0,
-    flex: 1,
-    gap: 3,
-  },
+  streakIdentity: { minWidth: 0, flex: 1, gap: 2 },
   streakName: {
-    color: colors.textPrimary,
+    color: recapColors.ink,
     fontFamily: fonts.semibold,
     fontSize: 13,
   },
   streakValue: {
-    color: colors.purpleDark,
-    fontFamily: fonts.bold,
-    fontSize: 13,
+    color: recapColors.purpleDark,
+    fontFamily: fonts.display,
+    fontSize: 16,
     fontVariant: ["tabular-nums"],
-  },
-  loadingState: {
-    flex: 1,
-    minHeight: 420,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  loadingText: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 14,
   },
   errorState: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: recapColors.border,
     paddingTop: 24,
   },
   errorTitle: {
-    color: colors.textPrimary,
-    fontFamily: fonts.bold,
+    color: recapColors.ink,
+    fontFamily: fonts.display,
     fontSize: 28,
     letterSpacing: -1.2,
   },
@@ -521,16 +600,14 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 20,
     borderRadius: radii.small,
-    backgroundColor: colors.purple,
+    backgroundColor: recapColors.purple,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
   retryButtonText: {
-    color: colors.surface,
+    color: recapColors.surface,
     fontFamily: fonts.bold,
     fontSize: 14,
   },
-  pressed: {
-    opacity: 0.75,
-  },
+  pressed: { opacity: 0.7 },
 });

@@ -2,7 +2,6 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import {
-  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -30,12 +29,6 @@ const homeColors = {
   purple: "#5b3df6",
   purpleDark: "#1a1333",
 } as const;
-
-const displayFont = Platform.select({
-  android: "serif",
-  default: "Georgia",
-  ios: "Georgia",
-});
 
 function HomeTopBar() {
   return (
@@ -231,6 +224,25 @@ export function HomeScreen() {
               </Text>
             </View>
           )}
+
+          <Pressable
+            accessibilityHint="Opens your recap from last week"
+            accessibilityLabel="View weekly recap"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => router.push("/recap")}
+            style={({ pressed }) => [
+              styles.recapLink,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.recapLinkText}>View recap</Text>
+            <MaterialCommunityIcons
+              color={homeColors.purple}
+              name="arrow-right"
+              size={14}
+            />
+          </Pressable>
         </View>
 
         <View style={styles.streakCard}>
@@ -307,20 +319,18 @@ const styles = StyleSheet.create({
   },
   pointsValue: {
     color: homeColors.ink,
-    fontFamily: displayFont,
+    fontFamily: fonts.display,
     fontSize: 94,
     fontVariant: ["tabular-nums"],
-    fontWeight: "800",
-    letterSpacing: -5.5,
+    letterSpacing: -3.5,
     lineHeight: 96,
   },
   pointsLabel: {
     marginTop: -3,
     color: homeColors.ink,
-    fontFamily: displayFont,
+    fontFamily: fonts.medium,
     fontSize: 24,
-    fontWeight: "700",
-    letterSpacing: -0.8,
+    letterSpacing: -0.4,
   },
   rewardsLink: {
     marginTop: 6,
@@ -356,17 +366,15 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: homeColors.ink,
-    fontFamily: displayFont,
+    fontFamily: fonts.display,
     fontSize: 27,
-    fontWeight: "700",
     letterSpacing: -0.5,
   },
   weekCount: {
     color: homeColors.ink,
-    fontFamily: displayFont,
+    fontFamily: fonts.display,
     fontSize: 27,
     fontVariant: ["tabular-nums"],
-    fontWeight: "700",
   },
   remaining: {
     color: colors.textSecondary,
@@ -407,6 +415,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
+  recapLink: {
+    alignSelf: "flex-end",
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  recapLinkText: {
+    color: homeColors.purple,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+  },
   streakCard: {
     minHeight: 64,
     flexDirection: "row",
@@ -443,9 +463,8 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     color: homeColors.ink,
-    fontFamily: displayFont,
+    fontFamily: fonts.display,
     fontSize: 30,
-    fontWeight: "700",
     letterSpacing: -1,
   },
   errorCopy: {
