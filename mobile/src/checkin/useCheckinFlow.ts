@@ -6,6 +6,7 @@ import {
 } from "../domain/weekly-goals";
 import { supabase } from "../lib/supabase";
 import { triggerTapHaptic } from "../motion/haptics";
+import { useRewardEvents } from "../motion/RewardEventProvider";
 import {
   firstRow,
   isCheckinContextRow,
@@ -38,6 +39,7 @@ export function useCheckinFlow(
   userId: string,
   { fixedToken }: UseCheckinFlowOptions = {},
 ) {
+  const { publishRewardEvent } = useRewardEvents();
   const [tokenInput, setTokenInput] = useState(fixedToken ?? "");
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [context, setContext] = useState<CheckinContextRow | null>(null);
@@ -371,6 +373,26 @@ export function useCheckinFlow(
 
         if (feedbackKey.current !== committedKey) {
           feedbackKey.current = committedKey;
+          if (
+            checkinResult.checkin_id &&
+            checkinResult.total_points !== null
+          ) {
+            publishRewardEvent({
+              checkinId: checkinResult.checkin_id,
+              finalTotalPoints: checkinResult.total_points,
+              finalWeeklySessions: checkinResult.weekly_sessions,
+              previousTotalPoints:
+                checkinResult.total_points -
+                checkinResult.total_points_earned,
+              previousWeeklySessions:
+                checkinResult.weekly_sessions === null
+                  ? null
+                  : checkinResult.weekly_sessions - 1,
+              userId,
+              weeklyGoal: checkinResult.weekly_goal,
+              weeklyGoalCompleted: checkinResult.weekly_goal_completed,
+            });
+          }
           triggerTapHaptic("success");
           void loadSuccessStreak(committedKey);
         }
@@ -395,7 +417,9 @@ export function useCheckinFlow(
     context,
     isSubmitting,
     loadSuccessStreak,
+    publishRewardEvent,
     selectedToken,
+    userId,
   ]);
 
   return {

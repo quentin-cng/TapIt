@@ -26,6 +26,7 @@ import {
   OnboardingProvider,
   useOnboarding,
 } from "../onboarding/OnboardingProvider";
+import { RewardEventProvider } from "../motion/RewardEventProvider";
 import { colors, fonts } from "../theme/tokens";
 
 void SplashScreen.preventAutoHideAsync();
@@ -195,12 +196,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.gestureRoot}>
       <SessionProvider>
-        <PendingCheckinProvider>
-          <OnboardingProvider>
-            <StatusBar style="dark" />
-            <RootNavigator />
-          </OnboardingProvider>
-        </PendingCheckinProvider>
+        <RewardEventProvider>
+          <PendingCheckinProvider>
+            <OnboardingProvider>
+              <StatusBar style="dark" />
+              <RootNavigator />
+            </OnboardingProvider>
+          </PendingCheckinProvider>
+        </RewardEventProvider>
       </SessionProvider>
     </GestureHandlerRootView>
   );

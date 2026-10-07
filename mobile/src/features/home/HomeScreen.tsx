@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -13,6 +13,11 @@ import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
 import { SessionDots } from "../../components/consistency/SessionDots";
 import { StreakFlame } from "../../components/consistency/StreakFlame";
+import { AnimatedPoints } from "../../motion/AnimatedPoints";
+import {
+  type HomeRewardEvent,
+  useRewardEvents,
+} from "../../motion/RewardEventProvider";
 import { TapPressable } from "../../motion/TapPressable";
 import { colors, fonts } from "../../theme/tokens";
 import {
@@ -20,7 +25,7 @@ import {
   PenguinProfileArtwork,
 } from "./HomeArtwork";
 import { HomeSkeleton } from "./HomeSkeleton";
-import { useHomeData } from "./useHomeData";
+import { type HomeData, useHomeData } from "./useHomeData";
 
 const homeColors = {
   background: "#fff8f1",
@@ -54,17 +59,53 @@ export function HomeScreen() {
   const userId = session!.user.id;
   const { data, error, isLoading, isRefreshing, load, refresh } =
     useHomeData(userId);
+  const { consumeRewardEvent, getPendingRewardEvent } = useRewardEvents();
+  const [confirmedReward, setConfirmedReward] =
+    useState<HomeRewardEvent | null>(null);
+
+  const reconcileRewardEvent = useCallback(
+    (nextData: HomeData | null) => {
+      if (!nextData) return;
+
+      const event = getPendingRewardEvent();
+      if (!event) return;
+
+      const weeklyStateMatches =
+        event.finalWeeklySessions === null || event.weeklyGoal === null
+          ? nextData.weeklyProgress === null
+          : nextData.weeklyProgress?.sessionsCompleted ===
+              event.finalWeeklySessions &&
+            nextData.weeklyProgress.targetSessions === event.weeklyGoal;
+      const isConfirmed =
+        event.userId === userId &&
+        !nextData.hasPersonalDataError &&
+        nextData.profile.total_points === event.finalTotalPoints &&
+        weeklyStateMatches;
+
+      setConfirmedReward(isConfirmed ? event : null);
+      consumeRewardEvent(event.checkinId);
+    },
+    [consumeRewardEvent, getPendingRewardEvent, userId],
+  );
+
+  const loadAndReconcile = useCallback(async () => {
+    reconcileRewardEvent(await load());
+  }, [load, reconcileRewardEvent]);
+
+  const refreshAndReconcile = useCallback(async () => {
+    reconcileRewardEvent(await refresh());
+  }, [reconcileRewardEvent, refresh]);
 
   useFocusEffect(
     useCallback(() => {
-      void load();
-    }, [load]),
+      void loadAndReconcile();
+    }, [loadAndReconcile]),
   );
 
   const refreshControl = (
     <RefreshControl
       colors={[homeColors.purple]}
-      onRefresh={() => void refresh()}
+      onRefresh={() => void refreshAndReconcile()}
       refreshing={isRefreshing}
       tintColor={homeColors.purple}
     />
@@ -119,6 +160,20 @@ export function HomeScreen() {
   const formattedPoints = new Intl.NumberFormat("en-CA").format(
     profile.total_points,
   );
+  const confirmedPointsReward =
+    confirmedReward?.userId === userId &&
+    confirmedReward.finalTotalPoints === profile.total_points
+      ? confirmedReward
+      : null;
+  const confirmedWeeklyReward =
+    confirmedPointsReward &&
+    weeklyProgress &&
+    confirmedPointsReward.finalWeeklySessions ===
+      weeklyProgress.sessionsCompleted &&
+    confirmedPointsReward.weeklyGoal === weeklyProgress.targetSessions
+      ? confirmedPointsReward
+      : null;
+  const animatedPointsFontSize = formattedPoints.length > 4 ? 78 : 94;
 
   return (
     <AppScreen
@@ -150,13 +205,33 @@ export function HomeScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Text
-            adjustsFontSizeToFit
-            numberOfLines={1}
-            style={styles.pointsValue}
-          >
-            {formattedPoints}
-          </Text>
+          {confirmedPointsReward ? (
+            <AnimatedPoints
+              accessibilityLabel={`${profile.total_points} points`}
+              animationKey={confirmedPointsReward.checkinId}
+              containerStyle={styles.animatedPointsContainer}
+              delayMs={40}
+              endValue={confirmedPointsReward.finalTotalPoints}
+              format="grouped"
+              startValue={confirmedPointsReward.previousTotalPoints}
+              style={[
+                styles.pointsValue,
+                styles.animatedPointsValue,
+                {
+                  fontSize: animatedPointsFontSize,
+                  lineHeight: animatedPointsFontSize + 2,
+                },
+              ]}
+            />
+          ) : (
+            <Text
+              adjustsFontSizeToFit
+              numberOfLines={1}
+              style={styles.pointsValue}
+            >
+              {formattedPoints}
+            </Text>
+          )}
           <Text style={styles.pointsLabel}>points</Text>
           <View style={styles.rewardsLink}>
             <Text style={styles.rewardsLinkText}>View rewards</Text>
@@ -202,6 +277,20 @@ export function HomeScreen() {
                 <SessionDots
                   accentColor={homeColors.purple}
                   completed={weeklyProgress.sessionsCompleted}
+                  completionAnimation={
+                    confirmedWeeklyReward &&
+                    confirmedWeeklyReward.previousWeeklySessions !== null &&
+                    confirmedWeeklyReward.finalWeeklySessions !== null &&
+                    confirmedWeeklyReward.finalWeeklySessions <=
+                      weeklyProgress.targetSessions
+                      ? {
+                          delayMs: 180,
+                          eventKey: confirmedWeeklyReward.checkinId,
+                          index:
+                            confirmedWeeklyReward.finalWeeklySessions - 1,
+                        }
+                      : undefined
+                  }
                   target={weeklyProgress.targetSessions}
                   variant="v3"
                 />
@@ -317,7 +406,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     zIndex: 1,
     left: 24,
-    maxWidth: "55%",
+    width: "55%",
   },
   pointsValue: {
     color: homeColors.ink,
@@ -326,6 +415,13 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     letterSpacing: -3.5,
     lineHeight: 96,
+  },
+  animatedPointsValue: {
+    width: "100%",
+    height: 100,
+  },
+  animatedPointsContainer: {
+    width: "100%",
   },
   pointsLabel: {
     marginTop: -3,

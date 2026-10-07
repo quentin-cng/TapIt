@@ -40,7 +40,9 @@ export function useHomeData(userId: string) {
   const requestId = useRef(0);
   const hasLoaded = useRef(false);
 
-  const load = useCallback(async (showRefreshIndicator = false) => {
+  const load = useCallback(async (
+    showRefreshIndicator = false,
+  ): Promise<HomeData | null> => {
     const currentRequest = ++requestId.current;
 
     if (showRefreshIndicator) {
@@ -84,9 +86,9 @@ export function useHomeData(userId: string) {
         getMontrealWeekStart(),
       );
       const checkinTimestamps = checkins.map((checkin) => checkin.created_at);
-      if (currentRequest !== requestId.current) return;
+      if (currentRequest !== requestId.current) return null;
 
-      setData({
+      const nextData: HomeData = {
         hasPersonalDataError: Boolean(
           checkinsResult.error || schedulesResult.error,
         ),
@@ -95,13 +97,16 @@ export function useHomeData(userId: string) {
           ? calculateWeeklyProgress(checkinTimestamps, currentWeeklyGoal)
           : null,
         weeklyStreaks: calculateWeeklyGoalStreaks(checkinTimestamps, schedules),
-      });
+      };
+      setData(nextData);
       hasLoaded.current = true;
+      return nextData;
     } catch (loadError) {
       console.error("[mobile home] data load failed", loadError);
       if (currentRequest === requestId.current) {
         setError("Your TapIt Home could not be loaded. Please try again.");
       }
+      return null;
     } finally {
       if (currentRequest === requestId.current) {
         setIsLoading(false);

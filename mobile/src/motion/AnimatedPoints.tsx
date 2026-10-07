@@ -5,6 +5,7 @@ import {
   View,
   type StyleProp,
   type TextStyle,
+  type ViewStyle,
 } from "react-native";
 import Animated, {
   Easing,
@@ -22,8 +23,10 @@ const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 type AnimatedPointsProps = {
   accessibilityLabel: string;
   animationKey: string;
+  containerStyle?: StyleProp<ViewStyle>;
   delayMs?: number;
   endValue: number;
+  format?: "grouped" | "plain";
   startValue: number;
   style?: StyleProp<TextStyle>;
 };
@@ -36,8 +39,10 @@ function getDuration(startValue: number, endValue: number) {
 export function AnimatedPoints({
   accessibilityLabel,
   animationKey,
+  containerStyle,
   delayMs = 0,
   endValue,
+  format = "plain",
   startValue,
   style,
 }: AnimatedPointsProps) {
@@ -46,7 +51,11 @@ export function AnimatedPoints({
   const lastAnimationKey = useRef<string | null>(null);
 
   const animatedProps = useAnimatedProps(() => {
-    const text = String(Math.round(value.value));
+    const roundedValue = Math.round(value.value);
+    const text =
+      format === "grouped"
+        ? formatGroupedInteger(roundedValue)
+        : String(roundedValue);
     return { defaultValue: text, text };
   });
 
@@ -76,7 +85,11 @@ export function AnimatedPoints({
   }, [animationKey, delayMs, endValue, reduceMotion, startValue, value]);
 
   return (
-    <View accessible accessibilityLabel={accessibilityLabel}>
+    <View
+      accessible
+      accessibilityLabel={accessibilityLabel}
+      style={containerStyle}
+    >
       <AnimatedTextInput
         accessibilityElementsHidden
         animatedProps={animatedProps}
@@ -89,6 +102,20 @@ export function AnimatedPoints({
       />
     </View>
   );
+}
+
+function formatGroupedInteger(value: number) {
+  "worklet";
+  const sign = value < 0 ? "-" : "";
+  let remaining = String(Math.abs(value));
+  let grouped = "";
+
+  while (remaining.length > 3) {
+    grouped = `,${remaining.slice(-3)}${grouped}`;
+    remaining = remaining.slice(0, -3);
+  }
+
+  return `${sign}${remaining}${grouped}`;
 }
 
 const styles = StyleSheet.create({
