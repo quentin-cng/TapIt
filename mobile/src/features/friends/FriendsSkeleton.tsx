@@ -1,8 +1,10 @@
 import { StyleSheet, Text, View } from "react-native";
 import { fonts } from "../../theme/tokens";
+import { FriendsHero } from "./FriendsHero";
 
 const skeletonColors = {
-  background: "#fff8f1",
+  background: "#faeee3",
+  surface: "#fffcf6",
   block: "#eadfd4",
   ink: "#1a1333",
 } as const;
@@ -19,25 +21,36 @@ export function FriendsSkeleton() {
         <Text style={styles.title}>
           Friends<Text style={styles.titlePeriod}>.</Text>
         </Text>
-        <Block style={styles.headerCircle} />
+        <View style={styles.headerBalance} />
       </View>
 
-      <View style={styles.rows}>
-        {Array.from({ length: 4 }, (_, index) => (
-          <View key={index} style={styles.row}>
-            <Block style={styles.avatar} />
-            <View style={styles.rowContent}>
-              <Block style={styles.name} />
-              <View style={styles.progressRow}>
-                <Block style={styles.progress} />
-                <Block style={styles.count} />
+      <FriendsHero />
+
+      <View style={styles.contentSurface}>
+        <Block style={styles.search} />
+
+        <View style={styles.tabs}>
+          <Block style={styles.activeTab} />
+          <Block style={styles.inactiveTab} />
+        </View>
+
+        <View style={styles.rows}>
+          {Array.from({ length: 3 }, (_, index) => (
+            <View key={index} style={styles.row}>
+              <Block style={styles.avatar} />
+              <View style={styles.rowContent}>
+                <Block style={styles.name} />
+                <Block style={styles.username} />
+                <Block style={styles.streak} />
+              </View>
+              <View style={styles.pointsBlock}>
+                <Block style={styles.points} />
+                <Block style={styles.pointsLabel} />
               </View>
             </View>
-          </View>
-        ))}
+          ))}
+        </View>
       </View>
-
-      <Block style={styles.cta} />
     </View>
   );
 }
@@ -50,39 +63,74 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 15,
+    marginBottom: 2,
   },
   headerCircle: { width: 38, height: 38, borderRadius: 19 },
+  headerBalance: { width: 38, height: 38 },
   title: {
+    position: "absolute",
+    right: 52,
+    left: 52,
     color: skeletonColors.ink,
     fontFamily: fonts.display,
     fontSize: 29,
+    letterSpacing: -1,
+    textAlign: "center",
   },
   titlePeriod: { color: "#5b3df6" },
+  contentSurface: {
+    zIndex: 2,
+    minHeight: 300,
+    marginTop: -22,
+    marginHorizontal: -20,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    backgroundColor: "#fff8f1",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+  },
+  search: {
+    height: 42,
+    borderRadius: 21,
+  },
+  tabs: {
+    minHeight: 46,
+    flexDirection: "row",
+    gap: 4,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: skeletonColors.block,
+    borderRadius: 20,
+    backgroundColor: skeletonColors.surface,
+    padding: 3,
+  },
+  activeTab: { flex: 1, borderRadius: 16, backgroundColor: "#d9cde0" },
+  inactiveTab: { flex: 1, borderRadius: 16 },
   rows: {
-    marginTop: 20,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: skeletonColors.block,
+    overflow: "hidden",
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: skeletonColors.block,
+    borderRadius: 22,
+    backgroundColor: skeletonColors.surface,
+    paddingHorizontal: 14,
   },
   row: {
-    minHeight: 76,
+    minHeight: 86,
     flexDirection: "row",
     alignItems: "center",
     gap: 11,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: skeletonColors.block,
-    paddingVertical: 11,
+    paddingVertical: 12,
   },
   avatar: { width: 38, height: 38, borderRadius: 19 },
-  rowContent: { flex: 1 },
-  name: { width: 105, height: 13, borderRadius: 5 },
-  progressRow: {
-    marginTop: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  progress: { height: 8, flex: 1, borderRadius: 4 },
-  count: { width: 28, height: 10, borderRadius: 4 },
-  cta: { height: 54, marginTop: 20, borderRadius: 20 },
+  rowContent: { minWidth: 0, flex: 1, gap: 5 },
+  name: { width: 105, height: 12, borderRadius: 5 },
+  username: { width: 68, height: 8, borderRadius: 4 },
+  streak: { width: 82, height: 9, borderRadius: 4 },
+  pointsBlock: { width: 50, alignItems: "flex-end", gap: 4 },
+  points: { width: 45, height: 14, borderRadius: 5 },
+  pointsLabel: { width: 28, height: 7, borderRadius: 3 },
 });

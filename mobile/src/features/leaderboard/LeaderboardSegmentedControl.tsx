@@ -41,8 +41,10 @@ export function LeaderboardSegmentedControl({
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    borderRadius: 18,
-    backgroundColor: "#f3e8da",
+    borderWidth: 1,
+    borderColor: "#eadccd",
+    borderRadius: 20,
+    backgroundColor: "#fffaf3",
     padding: 3,
   },
   button: {
@@ -50,7 +52,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 15,
+    borderRadius: 16,
   },
   buttonSelected: {
     backgroundColor: "#24143f",

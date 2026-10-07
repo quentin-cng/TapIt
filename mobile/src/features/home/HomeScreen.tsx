@@ -12,7 +12,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
 import { SessionDots } from "../../components/consistency/SessionDots";
-import { StreakFlame } from "../../components/consistency/StreakFlame";
 import { AnimatedPoints } from "../../motion/AnimatedPoints";
 import {
   type HomeRewardEvent,
@@ -26,14 +25,16 @@ import {
 } from "./HomeArtwork";
 import { HomeSkeleton } from "./HomeSkeleton";
 import { type HomeData, useHomeData } from "./useHomeData";
+import { useHomeSocialNudge } from "./useHomeSocialNudge";
 
 const homeColors = {
   background: "#fff8f1",
   surface: "#fffcf6",
+  softSurface: "#f8f0e6",
   border: "#ebddcf",
   ink: "#1a1333",
   purple: "#5b3df6",
-  purpleDark: "#1a1333",
+  dark: "#24152f",
 } as const;
 
 function HomeTopBar() {
@@ -59,6 +60,14 @@ export function HomeScreen() {
   const userId = session!.user.id;
   const { data, error, isLoading, isRefreshing, load, refresh } =
     useHomeData(userId);
+  const {
+    data: socialNudge,
+    hasError: hasSocialDataError,
+    isLoading: isSocialLoading,
+    isRefreshing: isSocialRefreshing,
+    load: loadSocialNudge,
+    refresh: refreshSocialNudge,
+  } = useHomeSocialNudge(userId);
   const { consumeRewardEvent, getPendingRewardEvent } = useRewardEvents();
   const [confirmedReward, setConfirmedReward] =
     useState<HomeRewardEvent | null>(null);
@@ -93,20 +102,22 @@ export function HomeScreen() {
   }, [load, reconcileRewardEvent]);
 
   const refreshAndReconcile = useCallback(async () => {
-    reconcileRewardEvent(await refresh());
-  }, [reconcileRewardEvent, refresh]);
+    const [nextData] = await Promise.all([refresh(), refreshSocialNudge()]);
+    reconcileRewardEvent(nextData);
+  }, [reconcileRewardEvent, refresh, refreshSocialNudge]);
 
   useFocusEffect(
     useCallback(() => {
       void loadAndReconcile();
-    }, [loadAndReconcile]),
+      void loadSocialNudge();
+    }, [loadAndReconcile, loadSocialNudge]),
   );
 
   const refreshControl = (
     <RefreshControl
       colors={[homeColors.purple]}
       onRefresh={() => void refreshAndReconcile()}
-      refreshing={isRefreshing}
+      refreshing={isRefreshing || isSocialRefreshing}
       tintColor={homeColors.purple}
     />
   );
@@ -194,17 +205,7 @@ export function HomeScreen() {
         <View style={[styles.heroTopbar, { paddingTop: heroTopOffset }]}>
           <HomeTopBar />
         </View>
-        <Pressable
-          accessibilityHint="Opens Rewards"
-          accessibilityLabel={`${profile.total_points} points. View rewards.`}
-          accessibilityRole="button"
-          onPress={() => router.push("/rewards")}
-          style={({ pressed }) => [
-            styles.pointsBlock,
-            { top: heroTopOffset + 48 },
-            pressed && styles.pressed,
-          ]}
-        >
+        <View style={[styles.pointsBlock, { top: heroTopOffset + 48 }]}>
           {confirmedPointsReward ? (
             <AnimatedPoints
               accessibilityLabel={`${profile.total_points} points`}
@@ -233,49 +234,52 @@ export function HomeScreen() {
             </Text>
           )}
           <Text style={styles.pointsLabel}>points</Text>
-          <View style={styles.rewardsLink}>
-            <Text style={styles.rewardsLinkText}>View rewards</Text>
-            <MaterialCommunityIcons
-              color={homeColors.purple}
-              name="arrow-right"
-              size={14}
-            />
-          </View>
-        </Pressable>
+        </View>
       </View>
 
       <View style={styles.contentPanel}>
-        <View style={styles.weekCard}>
+        <TapPressable
+          accessibilityHint="Opens Profile where you can change your weekly goal"
+          accessibilityLabel={
+            weeklyProgress
+              ? `${weeklyProgress.sessionsCompleted} of ${weeklyProgress.targetSessions} sessions this week. Weekly goal.`
+              : "No weekly goal. Set your weekly goal."
+          }
+          accessibilityRole="button"
+          haptic="press"
+          onPress={() => router.push("/profile")}
+          style={({ pressed }) => [
+            styles.weekCard,
+            pressed && styles.cardPressed,
+          ]}
+        >
           <View style={styles.weekHeader}>
-            <Pressable
-              accessibilityHint="Opens Profile where you can change your weekly goal"
-              accessibilityRole="button"
-              hitSlop={8}
-              onPress={() => router.push("/profile")}
-              style={({ pressed }) => [
-                styles.editGoal,
-                pressed && styles.pressed,
+            <Text style={styles.weekEyebrow}>THIS WEEK</Text>
+            <Text
+              style={[
+                styles.weekGoalLabel,
+                weeklyProgress?.isComplete && styles.goalComplete,
               ]}
             >
-              <Text style={styles.sectionTitle}>This week</Text>
-              <MaterialCommunityIcons
-                color={homeColors.purple}
-                name="pencil-outline"
-                size={13}
-              />
-            </Pressable>
-            {weeklyProgress ? (
-              <Text style={styles.weekCount}>
-                {weeklyProgress.sessionsCompleted} / {weeklyProgress.targetSessions}
-              </Text>
-            ) : null}
+              {weeklyProgress?.isComplete ? "Goal complete" : "Weekly goal"}
+            </Text>
           </View>
 
           {weeklyProgress ? (
-            <View style={styles.sessionRow}>
+            <>
+              <View style={styles.weekTitleRow}>
+                <Text style={styles.weekCount}>
+                  {weeklyProgress.sessionsCompleted} / {weeklyProgress.targetSessions} sessions
+                </Text>
+                <MaterialCommunityIcons
+                  color={homeColors.ink}
+                  name="chevron-right"
+                  size={25}
+                />
+              </View>
               <View style={styles.sessionDots}>
                 <SessionDots
-                  accentColor={homeColors.purple}
+                  accentColor="#9c7ae8"
                   completed={weeklyProgress.sessionsCompleted}
                   completionAnimation={
                     confirmedWeeklyReward &&
@@ -292,83 +296,150 @@ export function HomeScreen() {
                       : undefined
                   }
                   target={weeklyProgress.targetSessions}
-                  variant="v3"
+                  variant="home"
                 />
               </View>
-              <Text
-                style={[
-                  styles.remaining,
-                  weeklyProgress.isComplete && styles.goalComplete,
-                ]}
-              >
-                {weeklyProgress.isComplete
-                  ? "Goal complete"
-                  : `${weeklyProgress.remainingSessions} to go`}
-              </Text>
-            </View>
+            </>
           ) : (
             <View style={styles.noGoalState}>
-              <Text style={styles.noGoalTitle}>No weekly goal yet.</Text>
+              <View style={styles.weekTitleRow}>
+                <Text style={styles.noGoalTitle}>Set your weekly goal</Text>
+                <MaterialCommunityIcons
+                  color={homeColors.ink}
+                  name="chevron-right"
+                  size={25}
+                />
+              </View>
               <Text style={styles.noGoalCopy}>
-                Set a weekly commitment to start tracking your consistency.
+                Choose how many sessions you want to show up for.
               </Text>
             </View>
           )}
+        </TapPressable>
 
-          <Pressable
-            accessibilityHint="Opens your recap from last week"
-            accessibilityLabel="View weekly recap"
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={() => router.push("/recap")}
-            style={({ pressed }) => [
-              styles.recapLink,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.recapLinkText}>View recap</Text>
+        <TapPressable
+          accessibilityHint={
+            socialNudge?.kind === "no-friends"
+              ? "Opens Friends where you can add someone"
+              : "Opens your friends’ weekly progress"
+          }
+          accessibilityLabel={
+            socialNudge
+              ? `${socialNudge.message} ${socialNudge.actionLabel}`
+              : "Friends this week. View friends"
+          }
+          accessibilityRole="button"
+          haptic="press"
+          onPress={() =>
+            socialNudge?.kind === "no-friends"
+              ? router.push({ pathname: "/friends", params: { add: "1" } })
+              : router.push("/friends")
+          }
+          style={({ pressed }) => [
+            styles.socialCard,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <View style={styles.socialIcon}>
             <MaterialCommunityIcons
-              color={homeColors.purple}
-              name="arrow-right"
-              size={14}
+              color={homeColors.dark}
+              name="account-group"
+              size={29}
             />
-          </Pressable>
-        </View>
-
-        <View style={styles.streakCard}>
-          <StreakFlame
-            message={
-              weeklyStreaks.currentStreak > 0
-                ? "Keep it alive this week."
-                : "Complete your goal to start one."
-            }
-            streak={weeklyStreaks.currentStreak}
-            variant="v3"
-          />
+          </View>
+          <View style={styles.socialNudgeCopy}>
+            {isSocialLoading && !socialNudge ? (
+              <View accessibilityLabel="Loading friends’ weekly progress">
+                <View style={styles.socialNudgeLoading} />
+                <View style={styles.socialDetailLoading} />
+              </View>
+            ) : (
+              <>
+                <Text numberOfLines={2} style={styles.socialNudgeMessage}>
+                  {socialNudge?.message ??
+                    (hasSocialDataError
+                      ? "Weekly friend updates are unavailable right now."
+                      : "See how your friends are showing up this week.")}
+                </Text>
+                <Text numberOfLines={1} style={styles.socialNudgeDetail}>
+                  {socialNudge?.supportingText ??
+                    "Open Friends to see everyone’s progress."}
+                </Text>
+              </>
+            )}
+          </View>
           <MaterialCommunityIcons
             color={homeColors.ink}
             name="chevron-right"
-            size={22}
+            size={25}
           />
+        </TapPressable>
+
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryCell}>
+            <View
+              accessible
+              accessibilityLabel={`${weeklyStreaks.currentStreak} week streak. Current streak.`}
+              style={styles.summaryCard}
+            >
+              <MaterialCommunityIcons
+                color="#ff9a37"
+                name="fire"
+                size={38}
+              />
+              <View style={styles.summaryCopy}>
+                <Text style={styles.summaryTitle}>
+                  {weeklyStreaks.currentStreak} {weeklyStreaks.currentStreak === 1 ? "week" : "weeks"}
+                </Text>
+                <Text style={styles.summarySubtitle}>Current streak</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.summaryCell}>
+            <TapPressable
+              accessibilityHint="Opens your recap from last week"
+              accessibilityLabel="View weekly recap. See your activity."
+              accessibilityRole="button"
+              haptic="press"
+              onPress={() => router.push("/recap")}
+              style={({ pressed }) => [
+                styles.summaryCard,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <View style={styles.recapIcon}>
+                <MaterialCommunityIcons
+                  color={homeColors.dark}
+                  name="chart-bar"
+                  size={25}
+                />
+              </View>
+              <View style={styles.summaryCopy}>
+                <Text style={styles.summaryTitle}>View recap</Text>
+                <Text style={styles.summarySubtitle}>See your activity</Text>
+              </View>
+            </TapPressable>
+          </View>
         </View>
 
         <TapPressable
-          accessibilityHint="Opens a visual preview of the future TapIt NFC reader"
-          accessibilityLabel="Tap to check in"
+          accessibilityHint="Opens Rewards"
+          accessibilityLabel={`${profile.total_points} points. View rewards.`}
           accessibilityRole="button"
           haptic="press"
-          onPress={() => router.push("/ready-to-tap")}
+          onPress={() => router.push("/rewards")}
           style={({ pressed }) => [
-            styles.checkinCta,
-            pressed && styles.checkinCtaPressed,
+            styles.rewardsCta,
+            pressed && styles.rewardsCtaPressed,
           ]}
         >
           <MaterialCommunityIcons
             color={homeColors.surface}
-            name="contactless-payment"
-            size={29}
+            name="gift"
+            size={27}
           />
-          <Text style={styles.checkinCtaText}>Tap to check in</Text>
+          <Text style={styles.rewardsCtaText}>View rewards</Text>
           <MaterialCommunityIcons
             color={homeColors.surface}
             name="chevron-right"
@@ -430,127 +501,197 @@ const styles = StyleSheet.create({
     fontSize: 24,
     letterSpacing: -0.4,
   },
-  rewardsLink: {
-    marginTop: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  rewardsLinkText: {
-    color: homeColors.purple,
-    fontFamily: fonts.semibold,
-    fontSize: 12,
-  },
   contentPanel: {
     zIndex: 2,
-    marginTop: -26,
+    marginTop: -28,
     marginHorizontal: -20,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: homeColors.surface,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 12,
+    gap: 12,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    backgroundColor: homeColors.background,
+    paddingHorizontal: 18,
+    paddingTop: 17,
+    paddingBottom: 18,
   },
   weekCard: {
-    paddingHorizontal: 4,
-    paddingBottom: 14,
+    minHeight: 154,
+    borderWidth: 1,
+    borderColor: homeColors.border,
+    borderRadius: 18,
+    backgroundColor: homeColors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   weekHeader: {
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 16,
   },
-  sectionTitle: {
+  weekEyebrow: {
     color: homeColors.ink,
-    fontFamily: fonts.display,
-    fontSize: 27,
-    letterSpacing: -0.5,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    letterSpacing: 1.35,
+  },
+  weekGoalLabel: {
+    color: homeColors.ink,
+    fontFamily: fonts.medium,
+    fontSize: 13,
+  },
+  weekTitleRow: {
+    marginTop: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
   weekCount: {
     color: homeColors.ink,
     fontFamily: fonts.display,
-    fontSize: 27,
+    fontSize: 31,
     fontVariant: ["tabular-nums"],
-  },
-  remaining: {
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    fontSize: 12,
+    letterSpacing: -0.6,
+    lineHeight: 38,
   },
   goalComplete: {
     color: homeColors.purple,
     fontFamily: fonts.semibold,
   },
-  sessionRow: {
-    marginTop: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 13,
-  },
   sessionDots: {
-    minWidth: 0,
-    flex: 1,
-  },
-  editGoal: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+    marginTop: 10,
   },
   noGoalState: {
-    marginTop: 15,
+    marginTop: 4,
   },
   noGoalTitle: {
     color: homeColors.ink,
-    fontFamily: fonts.semibold,
-    fontSize: 15,
+    fontFamily: fonts.display,
+    fontSize: 27,
   },
   noGoalCopy: {
-    marginTop: 5,
+    marginTop: 8,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  socialCard: {
+    minHeight: 92,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: homeColors.border,
+    borderRadius: 18,
+    backgroundColor: homeColors.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  socialIcon: {
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 24,
+    backgroundColor: homeColors.softSurface,
+  },
+  socialNudgeCopy: {
+    minWidth: 0,
+    flex: 1,
+  },
+  socialNudgeMessage: {
+    color: homeColors.ink,
+    fontFamily: fonts.semibold,
+    fontSize: 16,
+    lineHeight: 21,
+  },
+  socialNudgeDetail: {
+    marginTop: 3,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 17,
   },
-  recapLink: {
-    alignSelf: "flex-end",
-    marginTop: 12,
+  socialNudgeLoading: {
+    width: "84%",
+    height: 14,
+    borderRadius: 6,
+    backgroundColor: "#eadfd4",
+  },
+  socialDetailLoading: {
+    width: "68%",
+    height: 10,
+    marginTop: 7,
+    borderRadius: 5,
+    backgroundColor: "#eadfd4",
+  },
+  summaryRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  summaryCell: {
+    minWidth: 0,
+    flex: 1,
+  },
+  summaryCard: {
+    width: "100%",
+    minHeight: 88,
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 9,
+    borderWidth: 1,
+    borderColor: homeColors.border,
+    borderRadius: 18,
+    backgroundColor: homeColors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
-  recapLinkText: {
-    color: homeColors.purple,
-    fontFamily: fonts.semibold,
-    fontSize: 12,
-  },
-  streakCard: {
-    minHeight: 64,
-    flexDirection: "row",
+  recapIcon: {
+    width: 38,
+    height: 38,
     alignItems: "center",
-    justifyContent: "space-between",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: homeColors.border,
-    paddingRight: 4,
-    paddingLeft: 4,
-  },
-  checkinCta: {
-    minHeight: 54,
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     borderRadius: 19,
-    backgroundColor: homeColors.purpleDark,
+    backgroundColor: homeColors.softSurface,
+  },
+  summaryCopy: {
+    minWidth: 0,
+    flex: 1,
+  },
+  summaryTitle: {
+    color: homeColors.ink,
+    fontFamily: fonts.semibold,
+    fontSize: 17,
+    lineHeight: 21,
+  },
+  summarySubtitle: {
+    marginTop: 3,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  cardPressed: {
+    opacity: 0.7,
+  },
+  rewardsCta: {
+    minHeight: 70,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 17,
+    backgroundColor: homeColors.dark,
     paddingHorizontal: 20,
   },
-  checkinCtaText: {
+  rewardsCtaText: {
+    flex: 1,
+    marginLeft: 22,
     color: homeColors.surface,
     fontFamily: fonts.semibold,
-    fontSize: 16,
+    fontSize: 18,
   },
-  checkinCtaPressed: {
+  rewardsCtaPressed: {
     opacity: 0.86,
   },
   errorState: {

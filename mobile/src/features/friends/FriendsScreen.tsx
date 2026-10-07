@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -14,12 +14,12 @@ import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
 import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
 import { resolveDisplayName } from "../../domain/profile-identity";
-import { TapPressable } from "../../motion/TapPressable";
 import { colors, fonts, radii } from "../../theme/tokens";
 import { PenguinProfileArtwork } from "../home/HomeArtwork";
 import { FriendActionButton } from "./FriendActionButton";
 import { FriendConsistencyRow } from "./FriendConsistencyRow";
 import { FriendDetailSheet } from "./FriendDetailSheet";
+import { FriendsHero } from "./FriendsHero";
 import { FriendsSkeleton } from "./FriendsSkeleton";
 import {
   type FriendActionResult,
@@ -31,9 +31,10 @@ import {
 } from "./useFriendsData";
 
 type ActionHandler = ReturnType<typeof useFriendsData>["performAction"];
+type FriendsView = "friends" | "requests";
 
 const friendsColors = {
-  background: "#fff8f1",
+  background: "#faeee3",
   surface: "#fffcf6",
   softSurface: "#f5eadc",
   lavender: "#f2edff",
@@ -43,7 +44,7 @@ const friendsColors = {
   border: "#eadccd",
 } as const;
 
-function FriendsHeader({ onAdd }: { onAdd: () => void }) {
+function FriendsHeader() {
   return (
     <View style={styles.header}>
       <Pressable
@@ -59,23 +60,48 @@ function FriendsHeader({ onAdd }: { onAdd: () => void }) {
       <Text accessibilityRole="header" style={styles.title}>
         Friends<Text style={styles.titlePeriod}>.</Text>
       </Text>
-      <Pressable
-        accessibilityHint="Focuses friend search"
-        accessibilityLabel="Add friend"
-        accessibilityRole="button"
-        hitSlop={8}
-        onPress={onAdd}
-        style={({ pressed }) => [
-          styles.headerAction,
-          pressed && styles.pressed,
-        ]}
-      >
-        <MaterialCommunityIcons
-          color={friendsColors.ink}
-          name="account-plus-outline"
-          size={25}
-        />
-      </Pressable>
+      <View style={styles.headerBalance} />
+    </View>
+  );
+}
+
+function FriendsTabs({
+  incomingCount,
+  onChange,
+  value,
+}: {
+  incomingCount: number;
+  onChange: (view: FriendsView) => void;
+  value: FriendsView;
+}) {
+  return (
+    <View accessibilityRole="tablist" style={styles.tabs}>
+      {(["friends", "requests"] as const).map((view) => {
+        const selected = value === view;
+
+        return (
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            key={view}
+            onPress={() => onChange(view)}
+            style={({ pressed }) => [
+              styles.tab,
+              selected && styles.tabSelected,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.tabLabel, selected && styles.tabLabelSelected]}>
+              {view === "friends" ? "Friends" : "Requests"}
+            </Text>
+            {view === "requests" && incomingCount > 0 ? (
+              <View style={styles.tabBadge}>
+                <Text style={styles.tabBadgeText}>{incomingCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -249,9 +275,10 @@ function EmptyState() {
 
 export function FriendsScreen() {
   const { session } = useSession();
+  const { add } = useLocalSearchParams<{ add?: string | string[] }>();
   const searchInputRef = useRef<TextInput>(null);
+  const [activeView, setActiveView] = useState<FriendsView>("friends");
   const [searchInput, setSearchInput] = useState("");
-  const [isAddAreaActive, setIsAddAreaActive] = useState(false);
   const [actionNotice, setActionNotice] = useState<FriendActionResult | null>(
     null,
   );
@@ -286,14 +313,9 @@ export function FriendsScreen() {
     />
   );
 
-  function openAddFlow() {
-    setIsAddAreaActive(true);
-    requestAnimationFrame(() => searchInputRef.current?.focus());
-  }
-
   function submitSearch() {
     setActionNotice(null);
-    setIsAddAreaActive(true);
+    setActiveView("friends");
     void runSearch(searchInput);
   }
 
@@ -301,6 +323,22 @@ export function FriendsScreen() {
     setSearchInput(value);
     if (!value.trim() && searchedQuery) void runSearch("");
   }
+
+  useEffect(() => {
+    if (add !== "1") return;
+
+    let focusFrame: number | null = null;
+    const activationFrame = requestAnimationFrame(() => {
+      setActiveView("friends");
+      router.setParams({ add: "" });
+      focusFrame = requestAnimationFrame(() => searchInputRef.current?.focus());
+    });
+
+    return () => {
+      cancelAnimationFrame(activationFrame);
+      if (focusFrame !== null) cancelAnimationFrame(focusFrame);
+    };
+  }, [add]);
 
   if (isLoading && !data) {
     return (
@@ -323,7 +361,8 @@ export function FriendsScreen() {
         showTopbar={false}
         variant="v3"
       >
-        <FriendsHeader onAdd={() => undefined} />
+        <FriendsHeader />
+        <FriendsHero />
         <View style={styles.errorState}>
           <Text accessibilityRole="header" style={styles.errorTitle}>
             Friends unavailable
@@ -352,10 +391,10 @@ export function FriendsScreen() {
         showTopbar={false}
         variant="v3"
       >
-        <FriendsHeader onAdd={openAddFlow} />
-
-        {isAddAreaActive ? (
-          <View style={styles.addArea}>
+        <FriendsHeader />
+        <FriendsHero />
+        <View style={styles.contentSurface}>
+          <View style={styles.searchArea}>
             <View style={styles.searchField}>
               <MaterialCommunityIcons
                 color={colors.textMuted}
@@ -368,6 +407,7 @@ export function FriendsScreen() {
                 editable={!isSearching}
                 maxLength={30}
                 onChangeText={handleSearchInput}
+                onFocus={() => setActiveView("friends")}
                 onSubmitEditing={submitSearch}
                 placeholder="Search friends..."
                 placeholderTextColor={colors.textMuted}
@@ -401,11 +441,20 @@ export function FriendsScreen() {
               </Pressable>
             </View>
 
-            {searchError ? (
+            <FriendsTabs
+              incomingCount={data.incomingRequests.length}
+              onChange={setActiveView}
+              value={activeView}
+            />
+
+            {activeView === "friends" && searchError ? (
               <Text accessibilityRole="alert" style={styles.fieldError}>
                 {searchError}
               </Text>
-            ) : searchedQuery && !isSearching && searchProfiles.length === 0 ? (
+            ) : activeView === "friends" &&
+              searchedQuery &&
+              !isSearching &&
+              searchProfiles.length === 0 ? (
               <View style={styles.searchEmpty}>
                 <Text style={styles.searchEmptyTitle}>No matching users</Text>
                 <Text style={styles.searchEmptyCopy}>
@@ -414,7 +463,7 @@ export function FriendsScreen() {
               </View>
             ) : null}
 
-            {searchProfiles.length > 0 ? (
+            {activeView === "friends" && searchProfiles.length > 0 ? (
               <View style={styles.searchResults}>
                 <Text style={styles.eyebrow}>Search results</Text>
                 {searchProfiles.map((profile) => (
@@ -427,102 +476,111 @@ export function FriendsScreen() {
                 ))}
               </View>
             ) : null}
+          </View>
 
-            {data.outgoingRequests.length > 0 ? (
-              <View style={styles.sentRequests}>
-                <View style={styles.sectionHeading}>
-                  <Text style={styles.sectionTitle}>Sent requests</Text>
-                  <Text style={styles.sectionCount}>
-                    {data.outgoingRequests.length}
-                  </Text>
+          {data.hasDataError ? (
+            <Text accessibilityRole="alert" style={styles.inlineError}>
+              Some friend or weekly data could not be loaded. Pull down to try
+              again.
+            </Text>
+          ) : null}
+
+          {actionNotice ? (
+            <Text
+              accessibilityRole={
+                actionNotice.status === "error" ? "alert" : "text"
+              }
+              style={[
+                styles.actionNotice,
+                actionNotice.status === "error"
+                  ? styles.noticeError
+                  : styles.noticeSuccess,
+              ]}
+            >
+              {actionNotice.message}
+            </Text>
+          ) : null}
+
+          {activeView === "friends" ? (
+            <View style={styles.friendsSection}>
+              {data.friends.length > 0 ? (
+                <View style={styles.friendList}>
+                  {data.friends.map((friend) => (
+                    <FriendConsistencyRow
+                      friend={friend}
+                      key={friend.profile.profile_id}
+                      onOpen={setSelectedFriend}
+                    />
+                  ))}
                 </View>
-                {data.outgoingRequests.map((request) => (
-                  <OutgoingRequestRow
-                    key={request.id}
-                    onAction={performAction}
-                    onResult={setActionNotice}
-                    request={request}
-                  />
-                ))}
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {data.incomingRequests.length > 0 ? (
-          <View style={styles.requestSection}>
-            <View style={styles.sectionHeading}>
-              <Text style={styles.sectionTitle}>Friend requests</Text>
-              <View style={styles.requestBadge}>
-                <Text style={styles.requestBadgeText}>
-                  {data.incomingRequests.length}
-                </Text>
-              </View>
-            </View>
-            {data.incomingRequests.map((request) => (
-              <IncomingRequestRow
-                key={request.id}
-                onAction={performAction}
-                onResult={setActionNotice}
-                request={request}
-              />
-            ))}
-          </View>
-        ) : null}
-
-        {data.hasDataError ? (
-          <Text accessibilityRole="alert" style={styles.inlineError}>
-            Some friend or weekly data could not be loaded. Pull down to try again.
-          </Text>
-        ) : null}
-
-        {actionNotice ? (
-          <Text
-            accessibilityRole={actionNotice.status === "error" ? "alert" : "text"}
-            style={[
-              styles.actionNotice,
-              actionNotice.status === "error"
-                ? styles.noticeError
-                : styles.noticeSuccess,
-            ]}
-          >
-            {actionNotice.message}
-          </Text>
-        ) : null}
-
-        <View style={styles.friendsSection}>
-          {data.friends.length > 0 ? (
-            <View style={styles.friendList}>
-              {data.friends.map((friend) => (
-                <FriendConsistencyRow
-                  friend={friend}
-                  key={friend.profile.profile_id}
-                  onOpen={setSelectedFriend}
-                />
-              ))}
+              ) : (
+                <EmptyState />
+              )}
             </View>
           ) : (
-            <EmptyState />
+            <View style={styles.requestsSurface}>
+              {data.incomingRequests.length > 0 ? (
+                <View style={styles.requestGroup}>
+                  <View style={styles.sectionHeading}>
+                    <Text style={styles.sectionTitle}>Incoming</Text>
+                    <Text style={styles.sectionCount}>
+                      {data.incomingRequests.length}
+                    </Text>
+                  </View>
+                  {data.incomingRequests.map((request) => (
+                    <IncomingRequestRow
+                      key={request.id}
+                      onAction={performAction}
+                      onResult={setActionNotice}
+                      request={request}
+                    />
+                  ))}
+                </View>
+              ) : null}
+
+              {data.outgoingRequests.length > 0 ? (
+                <View
+                  style={[
+                    styles.requestGroup,
+                    data.incomingRequests.length > 0 && styles.sentRequests,
+                  ]}
+                >
+                  <View style={styles.sectionHeading}>
+                    <Text style={styles.sectionTitle}>Sent</Text>
+                    <Text style={styles.sectionCount}>
+                      {data.outgoingRequests.length}
+                    </Text>
+                  </View>
+                  {data.outgoingRequests.map((request) => (
+                    <OutgoingRequestRow
+                      key={request.id}
+                      onAction={performAction}
+                      onResult={setActionNotice}
+                      request={request}
+                    />
+                  ))}
+                </View>
+              ) : null}
+
+              {data.incomingRequests.length === 0 &&
+              data.outgoingRequests.length === 0 ? (
+                <View style={styles.requestsEmpty}>
+                  <MaterialCommunityIcons
+                    color={friendsColors.purple}
+                    name="account-clock-outline"
+                    size={28}
+                  />
+                  <Text style={styles.requestsEmptyTitle}>
+                    No friend requests
+                  </Text>
+                  <Text style={styles.requestsEmptyCopy}>
+                    Incoming and sent requests will appear here.
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           )}
         </View>
-
-        <TapPressable
-          accessibilityHint="Focuses friend search"
-          accessibilityRole="button"
-          haptic="press"
-          onPress={openAddFlow}
-          style={({ pressed }) => [
-            styles.addFriendsButton,
-            pressed && styles.addFriendsButtonPressed,
-          ]}
-        >
-          <MaterialCommunityIcons
-            color={friendsColors.surface}
-            name="account-plus-outline"
-            size={22}
-          />
-          <Text style={styles.addFriendsLabel}>Add friends</Text>
-        </TapPressable>
       </AppScreen>
 
       <FriendDetailSheet
@@ -544,7 +602,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 15,
+    marginBottom: 2,
   },
   title: {
     position: "absolute",
@@ -557,14 +615,59 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   titlePeriod: { color: friendsColors.purple },
-  headerAction: {
-    width: 40,
-    height: 40,
+  headerBalance: { width: 38, height: 38 },
+  contentSurface: {
+    zIndex: 2,
+    minHeight: 300,
+    marginTop: -22,
+    marginHorizontal: -20,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    backgroundColor: "#fff8f1",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+  },
+  tabs: {
+    flexDirection: "row",
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: friendsColors.border,
+    borderRadius: 20,
+    backgroundColor: friendsColors.surface,
+    padding: 3,
+  },
+  tab: {
+    minHeight: 38,
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 20,
+    gap: 7,
+    borderRadius: 16,
   },
-  addArea: { marginTop: 2 },
+  tabSelected: { backgroundColor: friendsColors.aubergine },
+  tabLabel: {
+    color: friendsColors.ink,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+  },
+  tabLabelSelected: { color: friendsColors.surface },
+  tabBadge: {
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 9,
+    backgroundColor: "#ef4055",
+    paddingHorizontal: 5,
+  },
+  tabBadgeText: {
+    color: friendsColors.surface,
+    fontFamily: fonts.bold,
+    fontSize: 9,
+  },
+  searchArea: { minWidth: 0 },
   searchField: {
     minHeight: 42,
     flexDirection: "row",
@@ -646,13 +749,11 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   friendsStatus: { color: colors.success },
-  sentRequests: { marginTop: 17 },
-  requestSection: {
-    marginTop: 18,
-    borderRadius: 18,
-    backgroundColor: friendsColors.lavender,
-    paddingHorizontal: 13,
-    paddingTop: 13,
+  sentRequests: {
+    marginTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: friendsColors.border,
+    paddingTop: 16,
   },
   sectionHeading: {
     flexDirection: "row",
@@ -668,20 +769,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontFamily: fonts.semibold,
     fontSize: 11,
-  },
-  requestBadge: {
-    minWidth: 19,
-    height: 19,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 10,
-    backgroundColor: "#ef4055",
-    paddingHorizontal: 5,
-  },
-  requestBadgeText: {
-    color: friendsColors.surface,
-    fontFamily: fonts.bold,
-    fontSize: 10,
   },
   identityLine: {
     minWidth: 0,
@@ -736,19 +823,26 @@ const styles = StyleSheet.create({
   },
   noticeError: { color: colors.danger },
   noticeSuccess: { color: colors.success },
-  friendsSection: { marginTop: 20 },
+  friendsSection: { marginTop: 14 },
   friendList: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: friendsColors.border,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: friendsColors.border,
+    borderRadius: 22,
+    backgroundColor: friendsColors.surface,
+    paddingHorizontal: 14,
   },
   emptyState: {
-    minHeight: 92,
+    minHeight: 112,
     flexDirection: "row",
     alignItems: "center",
     gap: 13,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: friendsColors.border,
-    paddingVertical: 18,
+    borderWidth: 1,
+    borderColor: friendsColors.border,
+    borderRadius: 22,
+    backgroundColor: friendsColors.surface,
+    paddingHorizontal: 17,
+    paddingVertical: 20,
   },
   emptyCopyBlock: { minWidth: 0, flex: 1 },
   emptyTitle: {
@@ -763,24 +857,49 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 17,
   },
-  addFriendsButton: {
-    minHeight: 54,
-    marginTop: 20,
-    flexDirection: "row",
+  requestsSurface: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: friendsColors.border,
+    borderRadius: 22,
+    backgroundColor: friendsColors.surface,
+    paddingHorizontal: 14,
+    paddingTop: 15,
+    paddingBottom: 4,
+  },
+  requestGroup: { minWidth: 0 },
+  requestsEmpty: {
+    minHeight: 150,
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
-    borderRadius: 20,
-    backgroundColor: friendsColors.aubergine,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingBottom: 12,
   },
-  addFriendsButtonPressed: { opacity: 0.86 },
-  addFriendsLabel: {
-    color: friendsColors.surface,
+  requestsEmptyTitle: {
+    marginTop: 9,
+    color: friendsColors.ink,
     fontFamily: fonts.semibold,
-    fontSize: 16,
+    fontSize: 14,
   },
-  errorState: { paddingTop: 24 },
+  requestsEmptyCopy: {
+    marginTop: 4,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    lineHeight: 17,
+    textAlign: "center",
+  },
+  errorState: {
+    zIndex: 2,
+    marginTop: -22,
+    marginHorizontal: -20,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    backgroundColor: "#fff8f1",
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 32,
+  },
   errorTitle: {
     color: friendsColors.ink,
     fontFamily: fonts.display,

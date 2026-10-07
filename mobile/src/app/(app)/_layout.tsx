@@ -12,7 +12,6 @@ export default function AuthenticatedLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="profile" />
       <Stack.Screen name="recap" />
-      <Stack.Screen name="ready-to-tap" />
       <Stack.Screen name="dev-checkin" />
     </Stack>
   );

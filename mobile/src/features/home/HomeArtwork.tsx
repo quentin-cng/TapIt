@@ -18,28 +18,14 @@ export function PenguinProfileArtwork() {
 
 export function HomeHeroArtwork({ height }: { height: number }) {
   const { width: windowWidth } = useWindowDimensions();
-  const artworkHeight = height;
-  const artworkWidth = Math.max(windowWidth, artworkHeight * (1362 / 1155));
-  const artworkLeft = (windowWidth - artworkWidth) / 2;
 
   return (
-    <View
-      style={[
-        styles.heroFrame,
-        {
-          height: artworkHeight,
-          left: artworkLeft,
-          width: artworkWidth,
-        },
-      ]}
-    >
-      <Image
-        accessibilityIgnoresInvertColors
-        resizeMode="contain"
-        source={homeArtwork}
-        style={{ height: artworkHeight, width: artworkWidth }}
-      />
-    </View>
+    <Image
+      accessibilityIgnoresInvertColors
+      resizeMode="cover"
+      source={homeArtwork}
+      style={[styles.heroImage, { height, width: windowWidth }]}
+    />
   );
 }
 
@@ -60,9 +46,9 @@ const styles = StyleSheet.create({
     width: 88,
     height: 59,
   },
-  heroFrame: {
+  heroImage: {
     position: "absolute",
     top: 0,
-    overflow: "hidden",
+    left: 0,
   },
 });

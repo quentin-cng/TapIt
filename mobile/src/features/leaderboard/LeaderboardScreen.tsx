@@ -26,7 +26,6 @@ import {
 const leaderboardColors = {
   background: "#fff8f1",
   surface: "#fffcf6",
-  lavender: "#f2edff",
   ink: "#1a1333",
   purple: "#5b3df6",
   border: "#eadccd",
@@ -99,17 +98,12 @@ function LeaderboardContent({
         </View>
       ) : null}
 
-      {data.rows.length ? (
-        <>
-          <LeaderboardPodium rows={podiumRows} />
+      <LeaderboardPodium rows={podiumRows} />
 
-          {hasStandings ? (
+      <View style={styles.rankingSurface}>
+        {data.rows.length ? (
+          hasStandings ? (
             <View style={styles.standingsSection}>
-              <View style={styles.standingsHeading}>
-                <Text style={styles.standingsTitle}>Standings</Text>
-                <Text style={styles.standingsMeta}>Total points</Text>
-              </View>
-
               {currentUserOutsidePodium ? (
                 <LeaderboardYourPlace row={currentUserOutsidePodium} />
               ) : null}
@@ -122,23 +116,25 @@ function LeaderboardContent({
                 </View>
               ) : null}
             </View>
-          ) : null}
-        </>
-      ) : (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyMark}>—</Text>
-          <Text style={styles.emptyTitle}>No rankings yet.</Text>
-          <Text style={styles.emptyCopy}>
-            Points from the first check-in will appear here.
-          </Text>
-        </View>
-      )}
-
-      {activeView === "friends" && data.rows.length === 1 ? (
-        <Text style={styles.note}>
-          Add friends to turn this into a competition.
-        </Text>
-      ) : null}
+          ) : (
+            <View style={styles.completePodiumState}>
+              <Text style={styles.completePodiumTitle}>
+                {activeView === "friends" && data.rows.length === 1
+                  ? "Add friends to build your standings."
+                  : "That’s everyone for now."}
+              </Text>
+            </View>
+          )
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyMark}>—</Text>
+            <Text style={styles.emptyTitle}>No rankings yet.</Text>
+            <Text style={styles.emptyCopy}>
+              Points from the first check-in will appear here.
+            </Text>
+          </View>
+        )}
+      </View>
     </>
   );
 }
@@ -240,13 +236,25 @@ const styles = StyleSheet.create({
   },
   titlePeriod: { color: leaderboardColors.purple },
   headerBalance: { width: 38, height: 38 },
+  rankingSurface: {
+    zIndex: 2,
+    minHeight: 180,
+    marginTop: -12,
+    marginHorizontal: -20,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    backgroundColor: leaderboardColors.background,
+    paddingTop: 18,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
   generalControls: {
     minHeight: 54,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
-    marginTop: 10,
+    marginTop: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: leaderboardColors.border,
     paddingBottom: 8,
@@ -262,36 +270,29 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 9,
   },
-  standingsSection: { marginTop: 17 },
-  standingsHeading: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 5,
-    paddingHorizontal: 2,
-  },
-  standingsTitle: {
-    color: leaderboardColors.ink,
-    fontFamily: fonts.display,
-    fontSize: 20,
-    letterSpacing: -0.45,
-  },
-  standingsMeta: {
-    color: colors.textMuted,
-    fontFamily: fonts.medium,
-    fontSize: 9,
-  },
+  standingsSection: { marginTop: 0 },
   rankingList: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: leaderboardColors.border,
   },
+  completePodiumState: {
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 10,
+  },
+  completePodiumTitle: {
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+  },
   emptyState: {
     alignItems: "center",
-    marginTop: 20,
-    borderRadius: 22,
-    backgroundColor: leaderboardColors.lavender,
+    marginTop: 5,
     paddingHorizontal: 22,
-    paddingVertical: 35,
+    paddingVertical: 28,
   },
   emptyMark: {
     color: leaderboardColors.purple,
@@ -310,14 +311,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 12,
     lineHeight: 18,
-    textAlign: "center",
-  },
-  note: {
-    marginTop: 14,
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 11,
-    lineHeight: 17,
     textAlign: "center",
   },
   errorState: {

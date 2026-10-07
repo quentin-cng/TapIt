@@ -10,6 +10,8 @@ type PlacementRow = FriendsLeaderboardRow | GeneralLeaderboardRow;
 
 export function LeaderboardYourPlace({ row }: { row: PlacementRow }) {
   const identityKey = row.username ?? `${row.displayName}-${row.rank}`;
+  const streak =
+    "bestWeeklyGoalStreak" in row ? row.bestWeeklyGoalStreak : null;
 
   return (
     <View
@@ -24,20 +26,28 @@ export function LeaderboardYourPlace({ row }: { row: PlacementRow }) {
       />
       <View style={styles.identity}>
         <Text style={styles.name}>You</Text>
-        <Text numberOfLines={1} style={styles.secondary}>
-          Your place
-        </Text>
+        <View style={styles.secondaryRow}>
+          <Text style={styles.secondary}>Your place</Text>
+          {streak !== null && streak > 0 ? (
+            <Text numberOfLines={1} style={styles.secondary}>
+              · 🔥 {streak} week streak
+            </Text>
+          ) : null}
+        </View>
       </View>
-      <Text style={styles.points}>
-        {new Intl.NumberFormat("en-CA").format(row.totalPoints)}
-      </Text>
+      <View style={styles.pointsBlock}>
+        <Text style={styles.points}>
+          {new Intl.NumberFormat("en-CA").format(row.totalPoints)}
+        </Text>
+        <Text style={styles.pointsLabel}>points</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: 62,
+    minHeight: 66,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
@@ -64,15 +74,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   secondary: {
-    marginTop: 1,
+    color: "#777386",
+    fontFamily: fonts.regular,
+    fontSize: 10,
+  },
+  secondaryRow: {
+    marginTop: 2,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  pointsBlock: { alignItems: "flex-end" },
+  points: {
+    color: "#5b3df6",
+    fontFamily: fonts.display,
+    fontSize: 18,
+    fontVariant: ["tabular-nums"],
+  },
+  pointsLabel: {
+    marginTop: -1,
     color: "#777386",
     fontFamily: fonts.regular,
     fontSize: 9,
-  },
-  points: {
-    color: "#5b3df6",
-    fontFamily: fonts.bold,
-    fontSize: 13,
-    fontVariant: ["tabular-nums"],
   },
 });

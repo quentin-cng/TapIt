@@ -33,28 +33,44 @@ export function HomeSkeleton() {
       <View style={styles.contentPanel}>
         <View style={styles.weekCard}>
           <View style={styles.row}>
-            <Block style={styles.weekTitle} />
-            <Block style={styles.weekCount} />
+            <Block style={styles.weekEyebrow} />
+            <Block style={styles.weekGoalLabel} />
           </View>
-          <View style={styles.weekProgress}>
-            <View style={styles.dotRow}>
-              {Array.from({ length: 4 }, (_, index) => (
-                <Block key={index} style={styles.dot} />
-              ))}
+          <Block style={styles.weekTitle} />
+          <View style={styles.dotRow}>
+            {Array.from({ length: 4 }, (_, index) => (
+              <Block key={index} style={styles.dot} />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.socialCard}>
+          <Block style={styles.socialIcon} />
+          <View style={styles.socialCopy}>
+            <Block style={styles.socialMessage} />
+            <Block style={styles.socialDetail} />
+          </View>
+          <Block style={styles.chevron} />
+        </View>
+
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryCard}>
+            <Block style={styles.summaryIcon} />
+            <View style={styles.summaryCopy}>
+              <Block style={styles.summaryTitle} />
+              <Block style={styles.summarySubtitle} />
             </View>
-            <Block style={styles.remaining} />
+          </View>
+          <View style={styles.summaryCard}>
+            <Block style={styles.summaryIcon} />
+            <View style={styles.summaryCopy}>
+              <Block style={styles.summaryTitle} />
+              <Block style={styles.summarySubtitle} />
+            </View>
           </View>
         </View>
 
-        <View style={styles.streakCard}>
-          <Block style={styles.flame} />
-          <View style={styles.streakCopy}>
-            <Block style={styles.streakTitle} />
-            <Block style={styles.streakMessage} />
-          </View>
-        </View>
-
-        <Block style={styles.cta} />
+        <Block style={styles.rewardsCta} />
       </View>
     </View>
   );
@@ -114,86 +130,134 @@ const styles = StyleSheet.create({
   },
   contentPanel: {
     zIndex: 2,
-    marginTop: -26,
+    marginTop: -28,
     marginHorizontal: -20,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: skeleton.surface,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 12,
+    gap: 12,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    backgroundColor: skeleton.cream,
+    paddingHorizontal: 18,
+    paddingTop: 17,
+    paddingBottom: 18,
   },
   weekCard: {
-    paddingHorizontal: 4,
-    paddingBottom: 14,
+    minHeight: 154,
+    borderWidth: 1,
+    borderColor: skeleton.base,
+    borderRadius: 18,
+    backgroundColor: skeleton.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  weekTitle: {
-    width: 86,
-    height: 20,
-    borderRadius: 7,
+  weekEyebrow: {
+    width: 72,
+    height: 10,
+    borderRadius: 5,
   },
-  weekCount: {
-    width: 51,
-    height: 25,
-    borderRadius: 7,
-  },
-  weekProgress: {
-    marginTop: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 13,
-  },
-  dotRow: {
-    minWidth: 0,
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  dot: {
-    width: 23,
-    height: 23,
-    borderRadius: 12,
-  },
-  remaining: {
-    width: 42,
+  weekGoalLabel: {
+    width: 76,
     height: 11,
     borderRadius: 5,
   },
-  streakCard: {
-    minHeight: 64,
+  weekTitle: {
+    width: 185,
+    height: 27,
+    marginTop: 8,
+    borderRadius: 8,
+  },
+  dotRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    gap: 10,
+  },
+  dot: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  socialCard: {
+    minHeight: 92,
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: skeleton.base,
-    paddingHorizontal: 4,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: skeleton.base,
+    borderRadius: 18,
+    backgroundColor: skeleton.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
   },
-  flame: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+  socialIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
-  streakCopy: {
-    gap: 8,
+  socialCopy: {
+    minWidth: 0,
+    flex: 1,
+    gap: 7,
   },
-  streakTitle: {
-    width: 113,
-    height: 17,
+  socialMessage: {
+    width: "88%",
+    height: 15,
     borderRadius: 6,
   },
-  streakMessage: {
-    width: 151,
-    height: 12,
+  socialDetail: {
+    width: "70%",
+    height: 10,
     borderRadius: 5,
   },
-  cta: {
-    height: 54,
-    marginTop: 8,
+  chevron: {
+    width: 8,
+    height: 20,
+    borderRadius: 4,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  summaryCard: {
+    minWidth: 0,
+    minHeight: 88,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    borderWidth: 1,
+    borderColor: skeleton.base,
+    borderRadius: 18,
+    backgroundColor: skeleton.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  summaryIcon: {
+    width: 38,
+    height: 38,
     borderRadius: 19,
+  },
+  summaryCopy: {
+    minWidth: 0,
+    flex: 1,
+    gap: 7,
+  },
+  summaryTitle: {
+    width: "86%",
+    height: 14,
+    borderRadius: 6,
+  },
+  summarySubtitle: {
+    width: "72%",
+    height: 10,
+    borderRadius: 5,
+  },
+  rewardsCta: {
+    minHeight: 70,
+    borderRadius: 17,
+    backgroundColor: "#d8cfc7",
   },
 });

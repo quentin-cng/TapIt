@@ -28,7 +28,7 @@ type SessionDotsProps = {
   completionAnimation?: SessionDotCompletionAnimation;
   target: number;
   tone?: "dark" | "light";
-  variant?: "default" | "v3";
+  variant?: "default" | "home" | "v3";
 };
 
 export function SessionDots({
@@ -49,6 +49,47 @@ export function SessionDots({
     completionAnimation.index < safeTarget
       ? completionAnimation.index
       : null;
+
+  if (variant === "home") {
+    const dotSize = safeTarget >= 7 ? 32 : safeTarget === 6 ? 36 : 44;
+    const dotGap = safeTarget >= 7 ? 4 : safeTarget === 6 ? 7 : 10;
+
+    return (
+      <View
+        accessibilityLabel={`${completed} of ${target} weekly sessions completed`}
+        style={[styles.homeRow, { gap: dotGap }]}
+      >
+        {Array.from({ length: safeTarget }, (_, index) => {
+          const isFilled = index < filled;
+
+          return index === animatedIndex ? (
+            <AnimatedCompletionDot
+              accentColor={accentColor}
+              animation={completionAnimation!}
+              compact={false}
+              homeSize={dotSize}
+              key={index}
+              tone={tone}
+              variant="home"
+            />
+          ) : (
+            <View
+              key={index}
+              style={[
+                styles.homeDot,
+                { height: dotSize, width: dotSize },
+                isFilled && styles.homeFilledDot,
+                isFilled && {
+                  backgroundColor: accentColor,
+                  borderColor: accentColor,
+                },
+              ]}
+            />
+          );
+        })}
+      </View>
+    );
+  }
 
   if (variant === "v3") {
     return (
@@ -144,14 +185,16 @@ function AnimatedCompletionDot({
   accentColor,
   animation,
   compact,
+  homeSize,
   tone,
   variant,
 }: {
   accentColor: string;
   animation: SessionDotCompletionAnimation;
   compact: boolean;
+  homeSize?: number;
   tone: "dark" | "light";
-  variant: "default" | "v3";
+  variant: "default" | "home" | "v3";
 }) {
   const reduceMotion = useReducedMotion();
   const fillScale = useSharedValue(reduceMotion ? 1 : 0);
@@ -263,6 +306,7 @@ function AnimatedCompletionDot({
     variant,
   ]);
 
+  const isHome = variant === "home";
   const isV3 = variant === "v3";
   const fillColor =
     tone === "dark" && !isV3 ? "#8b67ed" : accentColor;
@@ -270,7 +314,8 @@ function AnimatedCompletionDot({
   return (
     <Animated.View
       style={[
-        isV3 ? styles.v3Dot : styles.dot,
+        isV3 ? styles.v3Dot : isHome ? styles.homeDot : styles.dot,
+        isHome && { height: homeSize, width: homeSize },
         compact && (isV3 ? styles.v3CompactDot : styles.compactDot),
         !isV3 && tone === "dark" && styles.darkDot,
         styles.animatedDot,
@@ -289,7 +334,7 @@ function AnimatedCompletionDot({
         <MaterialCommunityIcons
           color={colors.surface}
           name="check"
-          size={compact ? 8 : isV3 ? 13 : 16}
+          size={compact ? 8 : isV3 ? 13 : isHome ? 19 : 16}
         />
       </Animated.View>
     </Animated.View>
@@ -384,5 +429,21 @@ const styles = StyleSheet.create({
   },
   v3CompactConnector: {
     height: 3,
+  },
+  homeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  homeDot: {
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "visible",
+    borderWidth: 1.5,
+    borderColor: "#77717d",
+    borderRadius: 999,
+    backgroundColor: "transparent",
+  },
+  homeFilledDot: {
+    borderWidth: 0,
   },
 });
