@@ -13,9 +13,11 @@ import {
 } from "react-native";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
+import { TapItAvatar } from "../../components/identity/TapItAvatar";
+import { normalizeProfileAvatarId } from "../../domain/profile-avatar";
 import { resolveDisplayName } from "../../domain/profile-identity";
 import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
-import { PenguinProfileArtwork } from "../home/HomeArtwork";
+import { ProfileAvatarPicker } from "./ProfileAvatarPicker";
 import { ProfileBottomSheet } from "./ProfileBottomSheet";
 import { ProfileIdentityEditor } from "./ProfileIdentityEditor";
 import { ProfileSkeleton } from "./ProfileSkeleton";
@@ -152,9 +154,11 @@ export function ProfileScreen() {
     load,
     refresh,
     signOut,
+    updateAvatar,
     updateIdentity,
     updateWeeklyGoal,
   } = useProfileData(session!.user.id);
+  const [isAvatarVisible, setIsAvatarVisible] = useState(false);
   const [isIdentityVisible, setIsIdentityVisible] = useState(false);
   const [isLegalVisible, setIsLegalVisible] = useState(false);
   const [isDeleteVisible, setIsDeleteVisible] = useState(false);
@@ -240,6 +244,7 @@ export function ProfileScreen() {
   }
 
   const displayName = resolveDisplayName(data.profile.display_name, data.profile.username);
+  const avatarId = normalizeProfileAvatarId(data.profile.avatar_id);
 
   return (
     <>
@@ -247,9 +252,31 @@ export function ProfileScreen() {
         <ProfileHeader />
 
         <View style={styles.identity}>
-          <View style={styles.profileAvatar}>
-            <View style={styles.scaledAvatar}><PenguinProfileArtwork /></View>
-          </View>
+          <Pressable
+            accessibilityHint="Opens the profile picture picker"
+            accessibilityLabel="Change profile picture"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => setIsAvatarVisible(true)}
+            style={({ pressed }) => [
+              styles.profileAvatarButton,
+              pressed && styles.rowPressed,
+            ]}
+          >
+            <TapItAvatar
+              avatarId={avatarId}
+              borderColor={profileColors.border}
+              borderWidth={1}
+              size={78}
+            />
+            <View accessibilityElementsHidden style={styles.avatarEditMark}>
+              <MaterialCommunityIcons
+                color={profileColors.background}
+                name="pencil"
+                size={13}
+              />
+            </View>
+          </Pressable>
           <Text style={styles.displayName}>{displayName}</Text>
           <Text style={styles.username}>@{data.profile.username}</Text>
           <Text style={styles.memberSince}>Member since {formatMemberSince(data.profile.created_at)}</Text>
@@ -311,6 +338,19 @@ export function ProfileScreen() {
           </View>
         </View>
       </AppScreen>
+
+      <ProfileBottomSheet
+        accessibilityLabel="Choose profile picture"
+        onClose={() => setIsAvatarVisible(false)}
+        visible={isAvatarVisible}
+      >
+        <ProfileAvatarPicker
+          avatarId={data.profile.avatar_id}
+          onCancel={() => setIsAvatarVisible(false)}
+          onSave={updateAvatar}
+          onSaved={() => setIsAvatarVisible(false)}
+        />
+      </ProfileBottomSheet>
 
       <ProfileBottomSheet accessibilityLabel="Edit profile" onClose={() => setIsIdentityVisible(false)} visible={isIdentityVisible}>
         <ProfileIdentityEditor
@@ -397,8 +437,8 @@ const styles = StyleSheet.create({
   headerTitle: { color: profileColors.ink, fontFamily: fonts.display, fontSize: 27, letterSpacing: -0.8 },
   titlePeriod: { color: profileColors.purple },
   identity: { alignItems: "center", paddingTop: 14 },
-  profileAvatar: { width: 78, height: 78, alignItems: "center", justifyContent: "center", overflow: "hidden", borderWidth: 1, borderColor: profileColors.border, borderRadius: 39, backgroundColor: "#ffcfaa" },
-  scaledAvatar: { transform: [{ scale: 1.95 }] },
+  profileAvatarButton: { position: "relative", borderRadius: 39 },
+  avatarEditMark: { position: "absolute", right: -2, bottom: -2, width: 25, height: 25, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: profileColors.background, borderRadius: 13, backgroundColor: profileColors.purple },
   displayName: { marginTop: 15, color: profileColors.ink, fontFamily: fonts.display, fontSize: 28, letterSpacing: -0.8 },
   username: { marginTop: 3, color: colors.textSecondary, fontFamily: fonts.medium, fontSize: 13 },
   memberSince: { marginTop: 5, color: "#918590", fontFamily: fonts.regular, fontSize: 11 },

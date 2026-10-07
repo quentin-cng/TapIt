@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
 import { SessionDots } from "../../components/consistency/SessionDots";
+import { TapItAvatar } from "../../components/identity/TapItAvatar";
 import { AnimatedPoints } from "../../motion/AnimatedPoints";
 import {
   type HomeRewardEvent,
@@ -19,10 +20,7 @@ import {
 } from "../../motion/RewardEventProvider";
 import { TapPressable } from "../../motion/TapPressable";
 import { colors, fonts } from "../../theme/tokens";
-import {
-  HomeHeroArtwork,
-  PenguinProfileArtwork,
-} from "./HomeArtwork";
+import { HomeHeroArtwork } from "./HomeArtwork";
 import { HomeSkeleton } from "./HomeSkeleton";
 import { type HomeData, useHomeData } from "./useHomeData";
 import { useHomeSocialNudge } from "./useHomeSocialNudge";
@@ -37,7 +35,7 @@ const homeColors = {
   dark: "#24152f",
 } as const;
 
-function HomeTopBar() {
+function HomeTopBar({ avatarId }: { avatarId?: string | null }) {
   return (
     <View style={styles.topbar}>
       <Pressable
@@ -48,7 +46,12 @@ function HomeTopBar() {
         onPress={() => router.push("/profile")}
         style={({ pressed }) => pressed && styles.pressed}
       >
-        <PenguinProfileArtwork />
+        <TapItAvatar
+          avatarId={avatarId}
+          borderColor={homeColors.ink}
+          borderWidth={2}
+          size={38}
+        />
       </Pressable>
     </View>
   );
@@ -203,7 +206,7 @@ export function HomeScreen() {
       <View style={[styles.hero, { height: heroHeight }]}>
         <HomeHeroArtwork height={heroHeight} />
         <View style={[styles.heroTopbar, { paddingTop: heroTopOffset }]}>
-          <HomeTopBar />
+          <HomeTopBar avatarId={profile.avatar_id} />
         </View>
         <View style={[styles.pointsBlock, { top: heroTopOffset + 48 }]}>
           {confirmedPointsReward ? (

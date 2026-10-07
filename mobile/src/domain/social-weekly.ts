@@ -1,9 +1,14 @@
 // Source: /lib/stats/social-weekly.ts in the existing TapIt web app.
-// Only the social RPC mapping and pure recap logic are copied unchanged.
+// Recap logic remains unchanged; the native mapper also carries avatar identity.
 import { resolveDisplayName } from "./profile-identity";
+import {
+  normalizeProfileAvatarId,
+  type ProfileAvatarId,
+} from "./profile-avatar";
 
 export type SocialWeeklyStat = {
   userId: string;
+  avatarId: ProfileAvatarId;
   displayName: string;
   username: string;
   totalPoints: number;
@@ -22,6 +27,7 @@ export type SocialWeeklyStat = {
 
 type SocialWeeklyRpcRow = {
   participant_user_id: string;
+  avatar_id?: unknown;
   display_name: string | null;
   username: string;
   total_points: number;
@@ -76,6 +82,7 @@ export function mapSocialWeeklyStats(data: unknown): SocialWeeklyStat[] {
 
   return data.filter(isRpcRow).map((row) => ({
     userId: row.participant_user_id,
+    avatarId: normalizeProfileAvatarId(row.avatar_id),
     displayName: resolveDisplayName(row.display_name, row.username),
     username: row.username,
     totalPoints: row.total_points,

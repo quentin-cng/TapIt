@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ProfileAvatarId } from "../../domain/profile-avatar";
 import type { SocialWeeklyStat } from "../../domain/social-weekly";
 import { mapSocialWeeklyStats } from "../../domain/social-weekly";
 import { supabase } from "../../lib/supabase";
@@ -16,6 +17,7 @@ type FriendRequestRow = {
 };
 
 export type RelationshipProfile = {
+  avatar_id?: string | null;
   profile_id: string;
   display_name: string | null;
   username: string;
@@ -24,6 +26,7 @@ export type RelationshipProfile = {
 };
 
 export type SearchProfile = {
+  avatar_id?: string | null;
   display_name: string | null;
   username: string;
   total_points: number;
@@ -47,6 +50,7 @@ export type OutgoingRequestView = {
 };
 
 export type FriendsData = {
+  currentUserAvatarId: ProfileAvatarId;
   friends: FriendView[];
   hasDataError: boolean;
   incomingRequests: IncomingRequestView[];
@@ -159,6 +163,8 @@ export function useFriendsData(userId: string) {
       if (currentRequest !== dataRequestId.current) return;
 
       setData({
+        currentUserAvatarId:
+          socialStatsById.get(userId)?.avatarId ?? "default",
         friends: relationshipProfiles
           .filter((profile) => friendIds.has(profile.profile_id))
           .map((profile) => ({

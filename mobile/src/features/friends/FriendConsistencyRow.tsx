@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
+import { TapItAvatar } from "../../components/identity/TapItAvatar";
 import { resolveDisplayName } from "../../domain/profile-identity";
 import { colors, fonts } from "../../theme/tokens";
 import type { FriendView } from "./useFriendsData";
@@ -32,11 +32,7 @@ export function FriendConsistencyRow({
       onPress={() => onOpen(friend)}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
-      <V3InitialAvatar
-        identityKey={friend.profile.username}
-        name={displayName}
-        size="small"
-      />
+      <TapItAvatar avatarId={friend.profile.avatar_id} size={38} />
 
       <View style={styles.content}>
         <Text numberOfLines={1} style={styles.name}>

@@ -12,10 +12,9 @@ import {
 } from "react-native";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
-import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
+import { TapItAvatar } from "../../components/identity/TapItAvatar";
 import { resolveDisplayName } from "../../domain/profile-identity";
 import { colors, fonts, radii } from "../../theme/tokens";
-import { PenguinProfileArtwork } from "../home/HomeArtwork";
 import { FriendActionButton } from "./FriendActionButton";
 import { FriendConsistencyRow } from "./FriendConsistencyRow";
 import { FriendDetailSheet } from "./FriendDetailSheet";
@@ -44,7 +43,7 @@ const friendsColors = {
   border: "#eadccd",
 } as const;
 
-function FriendsHeader() {
+function FriendsHeader({ avatarId }: { avatarId?: string | null }) {
   return (
     <View style={styles.header}>
       <Pressable
@@ -55,7 +54,12 @@ function FriendsHeader() {
         onPress={() => router.push("/profile")}
         style={({ pressed }) => pressed && styles.pressed}
       >
-        <PenguinProfileArtwork />
+        <TapItAvatar
+          avatarId={avatarId}
+          borderColor={friendsColors.ink}
+          borderWidth={2}
+          size={38}
+        />
       </Pressable>
       <Text accessibilityRole="header" style={styles.title}>
         Friends<Text style={styles.titlePeriod}>.</Text>
@@ -107,21 +111,17 @@ function FriendsTabs({
 }
 
 function IdentityLine({
+  avatarId,
   displayName,
-  identityKey,
   username,
 }: {
+  avatarId?: string | null;
   displayName: string;
-  identityKey: string;
   username: string;
 }) {
   return (
     <View style={styles.identityLine}>
-      <V3InitialAvatar
-        identityKey={identityKey}
-        name={displayName}
-        size="small"
-      />
+      <TapItAvatar avatarId={avatarId} size={38} />
       <View style={styles.identityText}>
         <Text numberOfLines={1} style={styles.identityName}>
           {displayName}
@@ -151,8 +151,8 @@ function IncomingRequestRow({
   return (
     <View style={styles.relationshipRow}>
       <IdentityLine
+        avatarId={request.profile.avatar_id}
         displayName={displayName}
-        identityKey={request.profile.username}
         username={request.profile.username}
       />
       <View style={styles.requestActions}>
@@ -190,8 +190,8 @@ function OutgoingRequestRow({
   return (
     <View style={styles.relationshipRow}>
       <IdentityLine
+        avatarId={request.profile.avatar_id}
         displayName={displayName}
-        identityKey={request.profile.username}
         username={request.profile.username}
       />
       <View style={styles.sentAction}>
@@ -221,8 +221,8 @@ function SearchResultRow({
   return (
     <View style={styles.searchResultRow}>
       <IdentityLine
+        avatarId={profile.avatar_id}
         displayName={displayName}
-        identityKey={profile.username}
         username={profile.username}
       />
       {profile.relationship_status === "friends" ? (
@@ -391,7 +391,7 @@ export function FriendsScreen() {
         showTopbar={false}
         variant="v3"
       >
-        <FriendsHeader />
+        <FriendsHeader avatarId={data.currentUserAvatarId} />
         <FriendsHero />
         <View style={styles.contentSurface}>
           <View style={styles.searchArea}>

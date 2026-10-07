@@ -5,6 +5,11 @@ import {
   normalizeDisplayName,
   normalizeUsername,
 } from "../../domain/profile-identity";
+import {
+  isProfileAvatarId,
+  normalizeProfileAvatarId,
+  type ProfileAvatarId,
+} from "../../domain/profile-avatar";
 import { addCalendarDays, getMontrealWeekStart } from "../../domain/montreal-calendar";
 import {
   calculateWeeklyGoalStreaks,
@@ -17,6 +22,7 @@ import {
 import { supabase } from "../../lib/supabase";
 
 export type MyProfile = {
+  avatar_id?: string | null;
   display_name: string | null;
   username: string;
   total_points: number;
@@ -63,6 +69,10 @@ export type IdentityMutationResult = ProfileMutationResult & {
 
 export type PrivacyMutationResult = ProfileMutationResult & {
   value: boolean;
+};
+
+export type AvatarMutationResult = ProfileMutationResult & {
+  value: ProfileAvatarId;
 };
 
 function formatEffectiveWeek(dateKey: string) {
@@ -208,6 +218,65 @@ export function useProfileData(userId: string) {
   );
 
   const refresh = useCallback(() => load(true), [load]);
+
+  const updateAvatar = useCallback(
+    async (avatarId: ProfileAvatarId): Promise<AvatarMutationResult> => {
+      const currentAvatarId = normalizeProfileAvatarId(
+        data?.profile.avatar_id,
+      );
+
+      if (!isProfileAvatarId(avatarId)) {
+        return {
+          status: "error",
+          message: "Choose a valid TapIt profile picture.",
+          value: currentAvatarId,
+        };
+      }
+
+      if (mutationsInFlight.current.has("avatar")) {
+        return {
+          status: "error",
+          message: "Your profile picture is already being saved.",
+          value: currentAvatarId,
+        };
+      }
+
+      mutationsInFlight.current.add("avatar");
+
+      try {
+        const { data: savedAvatarId, error: updateError } = await supabase.rpc(
+          "set_my_avatar",
+          { p_avatar_id: avatarId },
+        );
+
+        if (updateError || savedAvatarId !== avatarId) {
+          if (updateError) logMutationError("update avatar", updateError);
+          return {
+            status: "error",
+            message: "We couldn’t update your profile picture. Please try again.",
+            value: currentAvatarId,
+          };
+        }
+
+        await load();
+        return {
+          status: "success",
+          message: "Profile picture updated.",
+          value: avatarId,
+        };
+      } catch (failure) {
+        console.error("[mobile profile] avatar update failed", failure);
+        return {
+          status: "error",
+          message: "We couldn’t update your profile picture. Please try again.",
+          value: currentAvatarId,
+        };
+      } finally {
+        mutationsInFlight.current.delete("avatar");
+      }
+    },
+    [data?.profile.avatar_id, load],
+  );
 
   const updateIdentity = useCallback(
     async (
@@ -528,6 +597,7 @@ export function useProfileData(userId: string) {
     load,
     refresh,
     signOut,
+    updateAvatar,
     updateIdentity,
     updatePrivacy,
     updateWeeklyGoal,

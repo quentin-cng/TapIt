@@ -11,6 +11,7 @@ import { getMontrealWeekStart } from "../../domain/montreal-calendar";
 import { supabase } from "../../lib/supabase";
 
 type MyProfile = {
+  avatar_id?: string | null;
   display_name: string | null;
   username: string;
   total_points: number;

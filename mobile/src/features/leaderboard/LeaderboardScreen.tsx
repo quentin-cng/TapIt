@@ -9,8 +9,8 @@ import {
 } from "react-native";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
+import { TapItAvatar } from "../../components/identity/TapItAvatar";
 import { colors, fonts, radii } from "../../theme/tokens";
-import { PenguinProfileArtwork } from "../home/HomeArtwork";
 import { GeneralLeaderboardPrivacyToggle } from "./GeneralLeaderboardPrivacyToggle";
 import { LeaderboardPodium } from "./LeaderboardPodium";
 import { LeaderboardRankingRow } from "./LeaderboardRankingRow";
@@ -31,7 +31,7 @@ const leaderboardColors = {
   border: "#eadccd",
 } as const;
 
-function LeaderboardHeader() {
+function LeaderboardHeader({ avatarId }: { avatarId?: string | null }) {
   return (
     <View style={styles.header}>
       <Pressable
@@ -42,7 +42,12 @@ function LeaderboardHeader() {
         onPress={() => router.push("/profile")}
         style={({ pressed }) => pressed && styles.pressed}
       >
-        <PenguinProfileArtwork />
+        <TapItAvatar
+          avatarId={avatarId}
+          borderColor={leaderboardColors.ink}
+          borderWidth={2}
+          size={38}
+        />
       </Pressable>
       <Text accessibilityRole="header" style={styles.title}>
         Leaderboard<Text style={styles.titlePeriod}>.</Text>
@@ -169,6 +174,7 @@ export function LeaderboardScreen() {
       tintColor={leaderboardColors.purple}
     />
   );
+  const headerAvatarId = data?.rows.find((row) => row.isCurrentUser)?.avatarId;
 
   return (
     <AppScreen
@@ -177,7 +183,7 @@ export function LeaderboardScreen() {
       showTopbar={false}
       variant="v3"
     >
-      <LeaderboardHeader />
+      <LeaderboardHeader avatarId={headerAvatarId} />
       <LeaderboardSegmentedControl
         onChange={setActiveView}
         value={activeView}

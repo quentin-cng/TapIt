@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SessionDots } from "../../components/consistency/SessionDots";
-import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
+import { TapItAvatar } from "../../components/identity/TapItAvatar";
 import { resolveDisplayName } from "../../domain/profile-identity";
 import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
 import { FriendActionButton } from "./FriendActionButton";
@@ -154,11 +154,7 @@ export function FriendDetailSheet({
             </Pressable>
 
             <View style={styles.identity}>
-              <V3InitialAvatar
-                identityKey={friend.profile.username}
-                name={displayName}
-                size="large"
-              />
+              <TapItAvatar avatarId={friend.profile.avatar_id} size={72} />
               <Text style={styles.name}>{displayName}</Text>
               <Text style={styles.username}>@{friend.profile.username}</Text>
             </View>

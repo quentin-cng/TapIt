@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useSession } from "../../auth/SessionProvider";
 import { AppScreen } from "../../components/AppScreen";
-import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
+import { TapItAvatar } from "../../components/identity/TapItAvatar";
 import { formatPreviousWeekRange } from "../../domain/recap-week";
 import {
   getWeeklyRecapMessage,
@@ -86,11 +86,7 @@ function RecapPersonRow({
   return (
     <View style={[styles.personRow, isCurrentUser && styles.currentUserRow]}>
       <View style={styles.avatarWrap}>
-        <V3InitialAvatar
-          identityKey={stat.username}
-          name={stat.displayName}
-          size="small"
-        />
+        <TapItAvatar avatarId={stat.avatarId} size={38} />
         <View
           accessibilityElementsHidden
           style={[
@@ -206,11 +202,7 @@ function BestStreakSection({ stats }: { stats: SocialWeeklyStat[] }) {
       <View style={styles.streakList}>
         {stats.map((stat) => (
           <View key={stat.userId} style={styles.streakRow}>
-            <V3InitialAvatar
-              identityKey={stat.username}
-              name={stat.displayName}
-              size="small"
-            />
+            <TapItAvatar avatarId={stat.avatarId} size={38} />
             <View style={styles.streakIdentity}>
               <Text numberOfLines={1} style={styles.streakName}>
                 {stat.displayName}

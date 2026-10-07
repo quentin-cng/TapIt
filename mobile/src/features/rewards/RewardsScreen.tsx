@@ -3,11 +3,12 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppScreen } from "../../components/AppScreen";
+import { TapItAvatar } from "../../components/identity/TapItAvatar";
 import { supabase } from "../../lib/supabase";
 import { colors, fonts } from "../../theme/tokens";
-import { PenguinProfileArtwork } from "../home/HomeArtwork";
 
 type RewardsProfile = {
+  avatar_id?: string | null;
   total_points: number;
 };
 
@@ -21,7 +22,7 @@ const rewardsColors = {
 } as const;
 
 export function RewardsScreen() {
-  const [points, setPoints] = useState<number | null>(null);
+  const [profile, setProfile] = useState<RewardsProfile | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const requestId = useRef(0);
@@ -39,7 +40,7 @@ export function RewardsScreen() {
       if (profileError || !data) throw profileError ?? new Error("No profile");
       if (currentRequest !== requestId.current) return;
 
-      setPoints((data as RewardsProfile).total_points);
+      setProfile(data as RewardsProfile);
     } catch (loadError) {
       console.error("[mobile rewards] profile load failed", loadError);
       if (currentRequest === requestId.current) {
@@ -59,6 +60,7 @@ export function RewardsScreen() {
     }, [load]),
   );
 
+  const points = profile?.total_points ?? null;
   const formattedPoints =
     points === null ? null : new Intl.NumberFormat("en-CA").format(points);
 
@@ -77,7 +79,12 @@ export function RewardsScreen() {
           onPress={() => router.push("/profile")}
           style={({ pressed }) => pressed && styles.pressed}
         >
-          <PenguinProfileArtwork />
+          <TapItAvatar
+            avatarId={profile?.avatar_id}
+            borderColor={rewardsColors.ink}
+            borderWidth={2}
+            size={38}
+          />
         </Pressable>
 
         <Text accessibilityRole="header" style={styles.headerTitle}>

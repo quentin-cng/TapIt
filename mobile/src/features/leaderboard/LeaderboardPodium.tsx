@@ -5,7 +5,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
+import { TapItAvatar } from "../../components/identity/TapItAvatar";
 import { fonts } from "../../theme/tokens";
 import type {
   FriendsLeaderboardRow,
@@ -23,7 +23,6 @@ function PodiumParticipant({
   featured?: boolean;
   row: PodiumRow;
 }) {
-  const identityKey = row.username ?? `${row.displayName}-${row.rank}`;
   const visibleName = row.isCurrentUser ? "You" : row.displayName;
 
   return (
@@ -39,11 +38,7 @@ function PodiumParticipant({
           row.isCurrentUser && styles.currentUserAvatarRing,
         ]}
       >
-        <V3InitialAvatar
-          identityKey={identityKey}
-          name={row.displayName}
-          size={featured ? "medium" : "small"}
-        />
+        <TapItAvatar avatarId={row.avatarId} size={featured ? 56 : 38} />
       </View>
       <Text
         numberOfLines={1}

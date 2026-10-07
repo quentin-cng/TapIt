@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { resolveDisplayName } from "../../domain/profile-identity";
+import {
+  normalizeProfileAvatarId,
+  type ProfileAvatarId,
+} from "../../domain/profile-avatar";
 import { mapSocialWeeklyStats } from "../../domain/social-weekly";
 import { supabase } from "../../lib/supabase";
 
 export type LeaderboardView = "friends" | "general";
 
 export type FriendsLeaderboardRow = {
+  avatarId: ProfileAvatarId;
   key: string;
   rank: number;
   displayName: string;
@@ -18,6 +23,7 @@ export type FriendsLeaderboardRow = {
 };
 
 export type GeneralLeaderboardRow = {
+  avatarId: ProfileAvatarId;
   key: string;
   rank: number;
   displayName: string;
@@ -27,6 +33,7 @@ export type GeneralLeaderboardRow = {
 };
 
 type GlobalLeaderboardRpcRow = {
+  avatar_id?: unknown;
   rank_position: number;
   display_name: string | null;
   username: string | null;
@@ -92,6 +99,7 @@ export function useLeaderboardData(
 
           const rows = mapSocialWeeklyStats(rpcData)
             .map((stat) => ({
+              avatarId: stat.avatarId,
               key: stat.userId,
               displayName: stat.displayName,
               username: stat.username,
@@ -127,6 +135,7 @@ export function useLeaderboardData(
 
           const rows = ((leaderboardResult.data ?? []) as GlobalLeaderboardRpcRow[]).map(
             (profile) => ({
+              avatarId: normalizeProfileAvatarId(profile.avatar_id),
               key: String(profile.rank_position),
               rank: profile.rank_position,
               displayName:

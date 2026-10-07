@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { V3InitialAvatar } from "../../components/identity/V3InitialAvatar";
+import { TapItAvatar } from "../../components/identity/TapItAvatar";
 import { colors, fonts } from "../../theme/tokens";
 import type {
   FriendsLeaderboardRow,
@@ -9,18 +9,13 @@ import type {
 type RankingRow = FriendsLeaderboardRow | GeneralLeaderboardRow;
 
 export function LeaderboardRankingRow({ row }: { row: RankingRow }) {
-  const identityKey = row.username ?? `${row.displayName}-${row.rank}`;
   const streak =
     "bestWeeklyGoalStreak" in row ? row.bestWeeklyGoalStreak : null;
 
   return (
     <View style={styles.row}>
       <Text style={styles.rank}>{row.rank}</Text>
-      <V3InitialAvatar
-        identityKey={identityKey}
-        name={row.displayName}
-        size="small"
-      />
+      <TapItAvatar avatarId={row.avatarId} size={38} />
       <View style={styles.identity}>
         <Text numberOfLines={1} style={styles.name}>
           {row.displayName}
