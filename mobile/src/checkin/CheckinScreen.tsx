@@ -78,6 +78,25 @@ const weeklyBonusPreview: CheckinPreview = {
   streak: 2,
 };
 
+const goalCompletionPreview: CheckinPreview = {
+  result: {
+    status: "success",
+    checkin_id: "development-preview-goal-completion",
+    location_id: "development-preview-location",
+    location_name: "McGill Fitness Centre",
+    points_awarded: 10,
+    total_points: 95,
+    checked_in_at: "2026-10-01T12:00:00.000Z",
+    next_eligible_at: "2026-10-01T16:00:00.000Z",
+    weekly_goal: 1,
+    weekly_sessions: 1,
+    weekly_bonus_points: 20,
+    weekly_goal_completed: true,
+    total_points_earned: 30,
+  },
+  streak: 2,
+};
+
 const cooldownPreview: CheckinPreview = {
   result: {
     status: "cooldown",
@@ -279,6 +298,12 @@ export function CheckinScreen(props: CheckinScreenProps) {
                       <PreviewButton
                         label="Preview Weekly Bonus"
                         onPress={() => startSuccessPreview(weeklyBonusPreview)}
+                      />
+                      <PreviewButton
+                        label="Preview Goal Completion"
+                        onPress={() =>
+                          startSuccessPreview(goalCompletionPreview)
+                        }
                       />
                       <PreviewButton
                         label="Preview Cooldown"

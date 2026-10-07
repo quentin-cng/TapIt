@@ -1,15 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  AccessibilityInfo,
-  Animated,
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import Animated, {
   Easing,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+  ReduceMotion,
+  cancelAnimation,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { SessionDots } from "../components/consistency/SessionDots";
 import { StreakFlame } from "../components/consistency/StreakFlame";
+import { AnimatedPoints } from "../motion/AnimatedPoints";
+import { RewardPointsBurst } from "../motion/RewardPointsBurst";
 import { fonts } from "../theme/tokens";
 import type { CheckinRow } from "./checkin-contract";
 
@@ -19,18 +24,103 @@ type CheckinSuccessViewProps = {
   streak: number | null;
 };
 
-function revealStyle(value: Animated.Value) {
-  return {
-    opacity: value,
+type RevealProps = {
+  animationKey: string;
+  children: ReactNode;
+  delayMs: number;
+  emphasis?: boolean;
+  style?: ViewStyle;
+};
+
+function Reveal({
+  animationKey,
+  children,
+  delayMs,
+  emphasis = false,
+  style,
+}: RevealProps) {
+  const reduceMotion = useReducedMotion();
+  const opacity = useSharedValue(reduceMotion ? 1 : 0);
+  const translateY = useSharedValue(reduceMotion ? 0 : 10);
+  const scale = useSharedValue(reduceMotion ? 1 : emphasis ? 0.97 : 1);
+  const lastAnimationKey = useRef<string | null>(null);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
     transform: [
-      {
-        translateY: value.interpolate({
-          inputRange: [0, 1],
-          outputRange: [12, 0],
-        }),
-      },
+      { translateY: translateY.value },
+      { scale: scale.value },
     ],
-  };
+  }));
+
+  useEffect(() => {
+    if (lastAnimationKey.current === animationKey) return;
+    lastAnimationKey.current = animationKey;
+    cancelAnimation(opacity);
+    cancelAnimation(translateY);
+    cancelAnimation(scale);
+
+    if (reduceMotion) {
+      opacity.set(1);
+      translateY.set(0);
+      scale.set(1);
+      return;
+    }
+
+    opacity.set(0);
+    translateY.set(10);
+    scale.set(emphasis ? 0.97 : 1);
+    opacity.set(
+      withDelay(
+        delayMs,
+        withTiming(1, {
+          duration: 250,
+          easing: Easing.out(Easing.cubic),
+          reduceMotion: ReduceMotion.System,
+        }),
+      ),
+    );
+    translateY.set(
+      withDelay(
+        delayMs,
+        withTiming(0, {
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
+          reduceMotion: ReduceMotion.System,
+        }),
+      ),
+    );
+    if (emphasis) {
+      scale.set(
+        withDelay(
+          delayMs,
+          withSpring(1, {
+            damping: 20,
+            mass: 0.45,
+            overshootClamping: true,
+            reduceMotion: ReduceMotion.System,
+            stiffness: 280,
+          }),
+        ),
+      );
+    }
+
+    return () => {
+      cancelAnimation(opacity);
+      cancelAnimation(translateY);
+      cancelAnimation(scale);
+    };
+  }, [
+    animationKey,
+    delayMs,
+    emphasis,
+    opacity,
+    reduceMotion,
+    scale,
+    translateY,
+  ]);
+
+  return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
 }
 
 export function CheckinSuccessView({
@@ -38,119 +128,102 @@ export function CheckinSuccessView({
   result,
   streak,
 }: CheckinSuccessViewProps) {
-  const [venueReveal] = useState(() => new Animated.Value(0));
-  const [pointsReveal] = useState(() => new Animated.Value(0));
-  const [progressReveal] = useState(() => new Animated.Value(0));
-  const [streakReveal] = useState(() => new Animated.Value(0));
-  const [doneReveal] = useState(() => new Animated.Value(0));
-  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
-  const finalSessions = result.weekly_sessions;
-  const [revealedSessions, setRevealedSessions] = useState(() =>
-    finalSessions === null ? 0 : Math.max(0, finalSessions - 1),
+  const animationKey = useMemo(
+    () =>
+      result.checkin_id ??
+      result.checked_in_at ??
+      `${result.location_id}-${result.total_points}-${result.total_points_earned}`,
+    [result],
   );
-
-  const reveals = useMemo(
-    () => [
-      venueReveal,
-      pointsReveal,
-      progressReveal,
-      streakReveal,
-      doneReveal,
-    ],
-    [doneReveal, pointsReveal, progressReveal, streakReveal, venueReveal],
-  );
-
-  useEffect(() => {
-    let mounted = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (mounted) setReduceMotion(enabled);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (reduceMotion === null) return;
-
-    if (reduceMotion) {
-      reveals.forEach((value) => value.setValue(1));
-      return;
-    }
-
-    const animation = Animated.stagger(
-      280,
-      reveals.map((value) =>
-        Animated.timing(value, {
-          duration: 350,
-          easing: Easing.out(Easing.cubic),
-          toValue: 1,
-          useNativeDriver: true,
-        }),
-      ),
-    );
-    const dotTimer = setTimeout(() => {
-      setRevealedSessions(finalSessions ?? 0);
-    }, 860);
-    animation.start();
-
-    return () => {
-      clearTimeout(dotTimer);
-      animation.stop();
-    };
-  }, [finalSessions, reduceMotion, reveals]);
-
-  useEffect(() => {
-    if (streak !== null && reduceMotion !== null) {
-      if (reduceMotion) streakReveal.setValue(1);
-    }
-  }, [reduceMotion, streak, streakReveal]);
-
+  const previousTotal =
+    result.total_points === null
+      ? null
+      : result.total_points - result.total_points_earned;
   const hasWeeklyProgress =
     result.weekly_goal !== null && result.weekly_sessions !== null;
-  const visibleSessions = reduceMotion
-    ? (finalSessions ?? 0)
-    : revealedSessions;
+  const newSessionIndex =
+    hasWeeklyProgress && result.weekly_sessions! > 0
+      ? result.weekly_sessions! - 1
+      : null;
+  const canAnimateNewSession =
+    newSessionIndex !== null && newSessionIndex < result.weekly_goal!;
 
   return (
     <View style={styles.container}>
-      <Animated.View style={revealStyle(venueReveal)}>
+      <Reveal animationKey={animationKey} delayMs={110}>
         <Text style={styles.successLabel}>You showed up.</Text>
         <Text accessibilityRole="header" style={styles.locationName}>
           {result.location_name ?? "TapIt location"}
         </Text>
-      </Animated.View>
+      </Reveal>
 
-      <Animated.View style={[styles.pointsBlock, revealStyle(pointsReveal)]}>
-        <Text adjustsFontSizeToFit numberOfLines={1} style={styles.pointsValue}>
-          +{result.total_points_earned}
-        </Text>
-        <Text style={styles.pointsLabel}>Points</Text>
-
-        {result.weekly_bonus_points > 0 ? (
-          <View style={styles.breakdown}>
-            <Text style={styles.breakdownText}>
-              {result.points_awarded} check-in
-            </Text>
-            <Text style={styles.breakdownText}>
-              {result.weekly_bonus_points} weekly goal bonus
-            </Text>
-          </View>
-        ) : null}
-
-        {result.total_points !== null ? (
-          <Text style={styles.totalPoints}>
-            {result.total_points} total points
+      <View style={styles.pointsBlock}>
+        <RewardPointsBurst animationKey={animationKey} delayMs={250}>
+          <Text
+            adjustsFontSizeToFit
+            accessibilityLabel={`${result.total_points_earned} points earned`}
+            numberOfLines={1}
+            style={styles.pointsValue}
+          >
+            +{result.total_points_earned}
           </Text>
-        ) : null}
-      </Animated.View>
+          <Text style={styles.pointsLabel}>Points</Text>
+        </RewardPointsBurst>
+
+        <Reveal animationKey={animationKey} delayMs={360}>
+          {result.weekly_bonus_points > 0 ? (
+            <View style={styles.breakdown}>
+              <Text style={styles.breakdownText}>
+                {result.points_awarded} check-in
+              </Text>
+              <Text style={styles.breakdownText}>
+                {result.weekly_bonus_points} weekly goal bonus
+              </Text>
+            </View>
+          ) : null}
+
+          {result.total_points !== null && previousTotal !== null ? (
+            <View style={styles.totalPointsRow}>
+              <AnimatedPoints
+                accessibilityLabel={`${result.total_points} total points`}
+                animationKey={animationKey}
+                delayMs={400}
+                endValue={result.total_points}
+                startValue={previousTotal}
+                style={[
+                  styles.totalPointsValue,
+                  {
+                    width: Math.max(
+                      26,
+                      String(result.total_points).length * 8,
+                    ),
+                  },
+                ]}
+              />
+              <Text style={styles.totalPointsLabel}>total points</Text>
+            </View>
+          ) : null}
+        </Reveal>
+      </View>
 
       {hasWeeklyProgress ? (
-        <Animated.View
-          style={[styles.progressBlock, revealStyle(progressReveal)]}
+        <Reveal
+          animationKey={animationKey}
+          delayMs={650}
+          emphasis={result.weekly_goal_completed}
+          style={styles.progressBlock}
         >
           <SessionDots
-            completed={visibleSessions}
+            completed={result.weekly_sessions!}
+            completionAnimation={
+              canAnimateNewSession
+                ? {
+                    delayMs: 760,
+                    eventKey: animationKey,
+                    index: newSessionIndex!,
+                  }
+                : undefined
+            }
             target={result.weekly_goal!}
             tone="dark"
           />
@@ -160,20 +233,24 @@ export function CheckinSuccessView({
           {result.weekly_goal_completed ? (
             <Text style={styles.goalComplete}>Weekly goal complete</Text>
           ) : null}
-        </Animated.View>
+        </Reveal>
       ) : null}
 
       {streak !== null ? (
-        <Animated.View style={revealStyle(streakReveal)}>
+        <Reveal animationKey={`${animationKey}-streak`} delayMs={80}>
           <StreakFlame
             message={streak > 0 ? "Keep it alive." : "Start your streak."}
             streak={streak}
             tone="dark"
           />
-        </Animated.View>
+        </Reveal>
       ) : null}
 
-      <Animated.View style={[styles.doneWrap, revealStyle(doneReveal)]}>
+      <Reveal
+        animationKey={animationKey}
+        delayMs={1020}
+        style={styles.doneWrap}
+      >
         <Pressable
           accessibilityRole="button"
           onPress={onDone}
@@ -184,7 +261,7 @@ export function CheckinSuccessView({
         >
           <Text style={styles.doneText}>Done</Text>
         </Pressable>
-      </Animated.View>
+      </Reveal>
     </View>
   );
 }
@@ -245,8 +322,22 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 11,
   },
-  totalPoints: {
+  totalPointsRow: {
+    minHeight: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     marginTop: 11,
+  },
+  totalPointsValue: {
+    height: 20,
+    color: "#85818d",
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    fontVariant: ["tabular-nums"],
+    lineHeight: 18,
+  },
+  totalPointsLabel: {
     color: "#85818d",
     fontFamily: fonts.regular,
     fontSize: 12,

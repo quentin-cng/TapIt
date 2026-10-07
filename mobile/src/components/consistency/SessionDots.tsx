@@ -1,12 +1,31 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
+import Animated, {
+  Easing,
+  ReduceMotion,
+  cancelAnimation,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { colors, v3Colors } from "../../theme/tokens";
+
+export type SessionDotCompletionAnimation = {
+  delayMs?: number;
+  eventKey: string;
+  index: number;
+};
 
 type SessionDotsProps = {
   accentColor?: string;
   compact?: boolean;
   completed: number;
+  completionAnimation?: SessionDotCompletionAnimation;
   target: number;
   tone?: "dark" | "light";
   variant?: "default" | "v3";
@@ -16,12 +35,20 @@ export function SessionDots({
   accentColor = v3Colors.purple,
   compact = false,
   completed,
+  completionAnimation,
   target,
   tone = "light",
   variant = "default",
 }: SessionDotsProps) {
   const safeTarget = Math.max(1, Math.min(7, target));
   const filled = Math.min(Math.max(0, completed), safeTarget);
+  const animatedIndex =
+    completionAnimation &&
+    completionAnimation.index >= 0 &&
+    completionAnimation.index < filled &&
+    completionAnimation.index < safeTarget
+      ? completionAnimation.index
+      : null;
 
   if (variant === "v3") {
     return (
@@ -34,25 +61,35 @@ export function SessionDots({
 
           return (
             <Fragment key={index}>
-              <View
-                style={[
-                  styles.v3Dot,
-                  compact && styles.v3CompactDot,
-                  isFilled && styles.v3FilledDot,
-                  isFilled && {
-                    backgroundColor: accentColor,
-                    borderColor: accentColor,
-                  },
-                ]}
-              >
-                {isFilled ? (
-                  <MaterialCommunityIcons
-                    color={colors.surface}
-                    name="check"
-                    size={compact ? 8 : 13}
-                  />
-                ) : null}
-              </View>
+              {index === animatedIndex ? (
+                <AnimatedCompletionDot
+                  accentColor={accentColor}
+                  animation={completionAnimation!}
+                  compact={compact}
+                  tone={tone}
+                  variant="v3"
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.v3Dot,
+                    compact && styles.v3CompactDot,
+                    isFilled && styles.v3FilledDot,
+                    isFilled && {
+                      backgroundColor: accentColor,
+                      borderColor: accentColor,
+                    },
+                  ]}
+                >
+                  {isFilled ? (
+                    <MaterialCommunityIcons
+                      color={colors.surface}
+                      name="check"
+                      size={compact ? 8 : 13}
+                    />
+                  ) : null}
+                </View>
+              )}
               {index < safeTarget - 1 ? (
                 <View
                   style={[
@@ -76,19 +113,186 @@ export function SessionDots({
       accessibilityLabel={`${completed} of ${target} weekly sessions completed`}
       style={[styles.row, compact && styles.compactRow]}
     >
-      {Array.from({ length: safeTarget }, (_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.dot,
-            compact && styles.compactDot,
-            tone === "dark" && styles.darkDot,
-            index < filled && styles.filledDot,
-            index < filled && tone === "dark" && styles.darkFilledDot,
-          ]}
-        />
-      ))}
+      {Array.from({ length: safeTarget }, (_, index) =>
+        index === animatedIndex ? (
+          <AnimatedCompletionDot
+            accentColor={accentColor}
+            animation={completionAnimation!}
+            compact={compact}
+            key={index}
+            tone={tone}
+            variant="default"
+          />
+        ) : (
+          <View
+            key={index}
+            style={[
+              styles.dot,
+              compact && styles.compactDot,
+              tone === "dark" && styles.darkDot,
+              index < filled && styles.filledDot,
+              index < filled && tone === "dark" && styles.darkFilledDot,
+            ]}
+          />
+        ),
+      )}
     </View>
+  );
+}
+
+function AnimatedCompletionDot({
+  accentColor,
+  animation,
+  compact,
+  tone,
+  variant,
+}: {
+  accentColor: string;
+  animation: SessionDotCompletionAnimation;
+  compact: boolean;
+  tone: "dark" | "light";
+  variant: "default" | "v3";
+}) {
+  const reduceMotion = useReducedMotion();
+  const fillScale = useSharedValue(reduceMotion ? 1 : 0);
+  const popScale = useSharedValue(1);
+  const checkOpacity = useSharedValue(
+    reduceMotion && variant === "v3" ? 1 : 0,
+  );
+  const checkScale = useSharedValue(reduceMotion ? 1 : 0.7);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: fillScale.value }],
+  }));
+  const popStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: popScale.value }],
+  }));
+  const checkStyle = useAnimatedStyle(() => ({
+    opacity: checkOpacity.value,
+    transform: [{ scale: checkScale.value }],
+  }));
+
+  useEffect(() => {
+    cancelAnimation(fillScale);
+    cancelAnimation(popScale);
+    cancelAnimation(checkOpacity);
+    cancelAnimation(checkScale);
+
+    if (reduceMotion) {
+      fillScale.set(1);
+      popScale.set(1);
+      checkOpacity.set(variant === "v3" ? 1 : 0);
+      checkScale.set(1);
+      return;
+    }
+
+    const delay = animation.delayMs ?? 0;
+    fillScale.set(0);
+    popScale.set(1);
+    checkOpacity.set(0);
+    checkScale.set(0.7);
+
+    fillScale.set(
+      withDelay(
+        delay,
+        withTiming(1, {
+          duration: 170,
+          easing: Easing.out(Easing.cubic),
+          reduceMotion: ReduceMotion.System,
+        }),
+      ),
+    );
+    popScale.set(
+      withDelay(
+        delay + 170,
+        withSequence(
+          withSpring(1.14, {
+            damping: 16,
+            mass: 0.36,
+            reduceMotion: ReduceMotion.System,
+            stiffness: 390,
+          }),
+          withTiming(1, {
+            duration: 140,
+            reduceMotion: ReduceMotion.System,
+          }),
+        ),
+      ),
+    );
+    checkOpacity.set(
+      withDelay(
+        delay + 170,
+        withSequence(
+          withTiming(1, { duration: 90, reduceMotion: ReduceMotion.System }),
+          withDelay(
+            170,
+            withTiming(variant === "v3" ? 1 : 0, {
+              duration: 110,
+              reduceMotion: ReduceMotion.System,
+            }),
+          ),
+        ),
+      ),
+    );
+    checkScale.set(
+      withDelay(
+        delay + 170,
+        withSpring(1, {
+          damping: 17,
+          mass: 0.35,
+          reduceMotion: ReduceMotion.System,
+          stiffness: 410,
+        }),
+      ),
+    );
+
+    return () => {
+      cancelAnimation(fillScale);
+      cancelAnimation(popScale);
+      cancelAnimation(checkOpacity);
+      cancelAnimation(checkScale);
+    };
+  }, [
+    animation.delayMs,
+    animation.eventKey,
+    checkOpacity,
+    checkScale,
+    fillScale,
+    popScale,
+    reduceMotion,
+    variant,
+  ]);
+
+  const isV3 = variant === "v3";
+  const fillColor =
+    tone === "dark" && !isV3 ? "#8b67ed" : accentColor;
+
+  return (
+    <Animated.View
+      style={[
+        isV3 ? styles.v3Dot : styles.dot,
+        compact && (isV3 ? styles.v3CompactDot : styles.compactDot),
+        !isV3 && tone === "dark" && styles.darkDot,
+        styles.animatedDot,
+        popStyle,
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.animatedFill,
+          isV3 && styles.v3AnimatedFill,
+          { backgroundColor: fillColor },
+          fillStyle,
+        ]}
+      />
+      <Animated.View style={[styles.animatedCheck, checkStyle]}>
+        <MaterialCommunityIcons
+          color={colors.surface}
+          name="check"
+          size={compact ? 8 : isV3 ? 13 : 16}
+        />
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -124,6 +328,29 @@ const styles = StyleSheet.create({
   darkFilledDot: {
     borderColor: "#8b67ed",
     backgroundColor: "#8b67ed",
+  },
+  animatedDot: {
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "visible",
+  },
+  animatedFill: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderRadius: 999,
+  },
+  v3AnimatedFill: {
+    top: -4,
+    right: -4,
+    bottom: -4,
+    left: -4,
+  },
+  animatedCheck: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   v3Row: {
     width: "100%",
