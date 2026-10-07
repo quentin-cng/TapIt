@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import type { RefreshControlProps } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ElasticRefreshScrollView } from "../motion/ElasticRefreshScrollView";
 import { colors, fonts, v3Colors } from "../theme/tokens";
 
 type AppScreenProps = {
@@ -43,7 +44,7 @@ export function AppScreen({
           ) : null}
         </View>
       ) : null}
-      <ScrollView
+      <ElasticRefreshScrollView
         contentContainerStyle={[
           styles.content,
           isV3 && styles.v3Content,
@@ -54,7 +55,7 @@ export function AppScreen({
         showsVerticalScrollIndicator={false}
       >
         {children}
-      </ScrollView>
+      </ElasticRefreshScrollView>
     </SafeAreaView>
   );
 }

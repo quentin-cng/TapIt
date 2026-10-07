@@ -8,6 +8,7 @@ import { useFonts } from "expo-font";
 import { router, Stack, SplashScreen, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import {
   ActivityIndicator,
   Pressable,
@@ -192,18 +193,23 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <SessionProvider>
-      <PendingCheckinProvider>
-        <OnboardingProvider>
-          <StatusBar style="dark" />
-          <RootNavigator />
-        </OnboardingProvider>
-      </PendingCheckinProvider>
-    </SessionProvider>
+    <GestureHandlerRootView style={styles.gestureRoot}>
+      <SessionProvider>
+        <PendingCheckinProvider>
+          <OnboardingProvider>
+            <StatusBar style="dark" />
+            <RootNavigator />
+          </OnboardingProvider>
+        </PendingCheckinProvider>
+      </SessionProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+  },
   stackContent: {
     backgroundColor: colors.background,
   },
