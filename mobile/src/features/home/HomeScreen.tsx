@@ -21,6 +21,7 @@ import {
 import { TapPressable } from "../../motion/TapPressable";
 import { colors, fonts } from "../../theme/tokens";
 import { HomeHeroArtwork } from "./HomeArtwork";
+import { HomeAmbientParticles } from "./HomeAmbientParticles";
 import { HomeSkeleton } from "./HomeSkeleton";
 import { type HomeData, useHomeData } from "./useHomeData";
 import { useHomeSocialNudge } from "./useHomeSocialNudge";
@@ -205,6 +206,7 @@ export function HomeScreen() {
 
       <View style={[styles.hero, { height: heroHeight }]}>
         <HomeHeroArtwork height={heroHeight} />
+        <HomeAmbientParticles />
         <View style={[styles.heroTopbar, { paddingTop: heroTopOffset }]}>
           <HomeTopBar avatarId={profile.avatar_id} />
         </View>
