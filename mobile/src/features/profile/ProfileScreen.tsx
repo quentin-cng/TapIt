@@ -307,6 +307,10 @@ export function ProfileScreen() {
               <Text style={styles.developmentText}>Check-in tester</Text>
               <MaterialCommunityIcons color="#897d8e" name="chevron-right" size={21} />
             </Pressable>
+            <Pressable accessibilityRole="button" onPress={() => router.push("/dev-onboarding")} style={({ pressed }) => [styles.developmentRow, pressed && styles.rowPressed]}>
+              <Text style={styles.developmentText}>Preview onboarding</Text>
+              <MaterialCommunityIcons color="#897d8e" name="chevron-right" size={21} />
+            </Pressable>
           </View>
         ) : null}
 

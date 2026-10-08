@@ -13,6 +13,7 @@ export default function AuthenticatedLayout() {
       <Stack.Screen name="profile" />
       <Stack.Screen name="recap" />
       <Stack.Screen name="dev-checkin" />
+      <Stack.Screen name="dev-onboarding" />
     </Stack>
   );
 }

@@ -27,6 +27,10 @@ import {
   useOnboarding,
 } from "../onboarding/OnboardingProvider";
 import { RewardEventProvider } from "../motion/RewardEventProvider";
+import {
+  getAuthoritativeSetupPath,
+  isDevelopmentOnboardingPreviewPath,
+} from "../domain/onboarding-routing";
 import { colors, fonts } from "../theme/tokens";
 
 void SplashScreen.preventAutoHideAsync();
@@ -42,6 +46,8 @@ function RootNavigator() {
     refresh: refreshOnboarding,
   } = useOnboarding();
   const pathname = usePathname();
+  const isDevelopmentOnboardingPreview =
+    isDevelopmentOnboardingPreviewPath(pathname, __DEV__);
   const handoffToken = useRef<string | null>(null);
 
   useEffect(() => {
@@ -57,12 +63,9 @@ function RootNavigator() {
     }
 
     if (!isOnboardingComplete) {
-      const destination =
-        readiness === "identity-incomplete"
-          ? "/onboarding/profile"
-          : "/onboarding/weekly-goal";
+      const destination = getAuthoritativeSetupPath(readiness);
 
-      if (pathname !== destination) router.replace(destination);
+      if (destination && pathname !== destination) router.replace(destination);
       return;
     }
 
@@ -96,6 +99,7 @@ function RootNavigator() {
       isOnboardingHydrating ||
       Boolean(onboardingError) ||
       !canContinuePendingCheckin ||
+      isDevelopmentOnboardingPreview ||
       pathname.startsWith("/checkin/") ||
       handoffToken.current === pendingToken
     ) {
@@ -109,6 +113,7 @@ function RootNavigator() {
     isOnboardingComplete,
     isOnboardingHydrating,
     isRestoring,
+    isDevelopmentOnboardingPreview,
     onboardingError,
     pathname,
     pendingToken,
@@ -167,6 +172,8 @@ function RootNavigator() {
         <Stack.Screen name="onboarding" />
       </Stack.Protected>
       <Stack.Protected guard={!session}>
+        <Stack.Screen name="welcome" />
+        <Stack.Screen name="create-account" />
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
       </Stack.Protected>
