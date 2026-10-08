@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { DM_Serif_Display } from "next/font/google";
+import { BetaCta } from "@/components/marketing/beta-cta";
+import { Credibility } from "@/components/marketing/credibility";
+import { FitnessSpaces } from "@/components/marketing/fitness-spaces";
 import { Hero } from "@/components/marketing/hero";
 import { HowItWorks } from "@/components/marketing/how-it-works";
+import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingHeader } from "@/components/marketing/marketing-header";
+import { ProductPreview } from "@/components/marketing/product-preview";
 import styles from "./page.module.css";
 
 const dmSerif = DM_Serif_Display({
@@ -38,6 +43,11 @@ export default async function Home({ searchParams }: HomePageProps) {
 
       <Hero />
       <HowItWorks />
+      <ProductPreview />
+      <FitnessSpaces />
+      <Credibility />
+      <BetaCta />
+      <MarketingFooter />
     </main>
   );
 }

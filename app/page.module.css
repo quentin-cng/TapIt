@@ -145,12 +145,6 @@
   color: var(--marketing-purple);
 }
 
-.heroDescription {
-  margin: 28px 0 0;
-  font-size: clamp(1.02rem, 1.35vw, 1.23rem);
-  line-height: 1.48;
-}
-
 .heroActions {
   display: flex;
   flex-wrap: wrap;
@@ -603,6 +597,384 @@
   line-height: 1.45;
 }
 
+/* Product proof */
+.productPreview {
+  position: relative;
+  overflow: hidden;
+  background: var(--marketing-ink);
+  color: #fffaf4;
+  padding: 92px 24px 0;
+  isolation: isolate;
+}
+
+.productHeading {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: min(100%, 1180px);
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 48px;
+  margin: 0 auto;
+}
+
+.productHeading h2,
+.fitnessCopy h2,
+.credibilityIntro h2,
+.betaCta h2 {
+  margin: 0;
+  font-family: var(--font-dm-serif), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 0.93;
+}
+
+.productHeading h2 {
+  color: var(--marketing-lavender);
+  font-size: clamp(3.7rem, 6.4vw, 6.5rem);
+}
+
+.productRingOne,
+.productRingTwo {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid rgba(173, 145, 245, 0.2);
+  border-radius: 50%;
+}
+
+.productRingOne {
+  top: 18%;
+  left: -14%;
+  width: 430px;
+  height: 430px;
+}
+
+.productRingTwo {
+  right: -8%;
+  bottom: -30%;
+  width: 560px;
+  height: 560px;
+  border-width: 52px;
+  opacity: 0.55;
+}
+
+.screenComposition {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1120px);
+  height: 620px;
+  margin: 38px auto 0;
+}
+
+.screenFigure {
+  position: absolute;
+  margin: 0;
+}
+
+.primary {
+  z-index: 3;
+  bottom: -15px;
+  left: 50%;
+  width: 280px;
+  transform: translateX(-50%);
+}
+
+.secondaryLeft,
+.secondaryRight {
+  z-index: 2;
+  bottom: -10px;
+  width: 232px;
+}
+
+.secondaryLeft {
+  left: 10%;
+  transform: rotate(-3deg);
+}
+
+.secondaryRight {
+  right: 10%;
+  transform: rotate(3deg);
+}
+
+.screenSlot {
+  width: 100%;
+  overflow: hidden;
+  border: 4px solid #f8f1e9;
+  border-radius: 30px 30px 0 0;
+  background: #f5ebdf;
+}
+
+.screenImage {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Fitness spaces */
+.fitnessSpaces {
+  display: grid;
+  width: min(100% - 48px, 1410px);
+  grid-template-columns: minmax(320px, 0.8fr) minmax(480px, 1.2fr);
+  align-items: center;
+  gap: clamp(54px, 8vw, 130px);
+  margin: 0 auto;
+  padding: 92px 0;
+  scroll-margin-top: 24px;
+}
+
+.sectionLabel {
+  margin: 0 0 20px;
+  color: var(--marketing-purple);
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.fitnessCopy h2 {
+  font-size: clamp(3.6rem, 6vw, 6rem);
+}
+
+.fitnessCopy > p:last-child {
+  margin: 26px 0 0;
+  color: var(--marketing-muted);
+  font-size: clamp(1rem, 1.35vw, 1.2rem);
+  line-height: 1.55;
+}
+
+.facilityWall {
+  position: relative;
+  min-height: 460px;
+  overflow: hidden;
+  border: 1px solid rgba(23, 19, 41, 0.1);
+  border-radius: 3px;
+  background-color: #e9e2d9;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
+}
+
+.facilityWall::after {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 252, 246, 0.28);
+  content: "";
+}
+
+.facilitySeam {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: 72%;
+  width: 1px;
+  background: rgba(71, 63, 72, 0.1);
+  box-shadow: 18px 0 38px rgba(48, 42, 50, 0.05);
+}
+
+.facilityPlaque {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  width: min(54%, 350px);
+  height: auto;
+  border-radius: 50%;
+  filter: drop-shadow(0 17px 13px rgba(35, 29, 39, 0.17));
+  transform: translate(-50%, -50%);
+}
+
+.facilitySignalOne,
+.facilitySignalTwo,
+.facilitySignalThree {
+  position: absolute;
+  z-index: 3;
+  width: 12px;
+  border-radius: 99px;
+  background: var(--marketing-lavender);
+  transform-origin: bottom center;
+}
+
+.facilitySignalOne {
+  top: 18%;
+  left: 27%;
+  height: 44px;
+  transform: rotate(-44deg);
+}
+
+.facilitySignalTwo {
+  top: 11%;
+  left: 33%;
+  height: 38px;
+  transform: rotate(-28deg);
+}
+
+.facilitySignalThree {
+  top: 8%;
+  left: 40%;
+  height: 29px;
+  transform: rotate(-15deg);
+}
+
+/* Credibility */
+.credibility {
+  display: grid;
+  width: min(100% - 48px, 1410px);
+  grid-template-columns: 1fr 1.15fr;
+  align-items: end;
+  gap: clamp(48px, 8vw, 130px);
+  margin: 0 auto;
+  border-top: 1px solid rgba(23, 19, 41, 0.12);
+  padding: 66px 0 72px;
+}
+
+.credibilityIntro h2 {
+  font-size: clamp(2.7rem, 4.5vw, 4.6rem);
+}
+
+.recognition {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-block: 1px solid rgba(23, 19, 41, 0.14);
+}
+
+.recognition > div {
+  display: grid;
+  gap: 7px;
+  padding: 27px clamp(20px, 3vw, 42px);
+}
+
+.recognition > div + div {
+  border-left: 1px solid rgba(23, 19, 41, 0.14);
+}
+
+.recognition strong {
+  font-family: var(--font-dm-serif), Georgia, serif;
+  font-size: clamp(1.7rem, 2.7vw, 2.55rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.recognition span {
+  color: var(--marketing-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Final CTA and footer */
+.betaCta {
+  position: relative;
+  overflow: hidden;
+  background: #b79cf6;
+  color: var(--marketing-ink);
+  scroll-margin-top: 24px;
+  isolation: isolate;
+}
+
+.betaCtaInner {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  min-height: 340px;
+  place-items: center;
+  align-content: center;
+  padding: 62px 24px;
+  text-align: center;
+}
+
+.betaCta h2 {
+  font-size: clamp(3.5rem, 7vw, 7rem);
+}
+
+.betaCta p {
+  margin: 14px 0 27px;
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+}
+
+.betaCtaInner > a {
+  display: inline-flex;
+  min-width: 178px;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--marketing-ink);
+  border-radius: 999px;
+  background: var(--marketing-ink);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 750;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.betaCtaInner > a:hover {
+  background: transparent;
+  color: var(--marketing-ink);
+}
+
+.ctaRingOne,
+.ctaRingTwo,
+.ctaRingThree {
+  position: absolute;
+  z-index: 1;
+  border: 2px solid rgba(23, 19, 41, 0.13);
+  border-radius: 50%;
+}
+
+.ctaRingOne {
+  top: 50%;
+  left: -80px;
+  width: 230px;
+  height: 230px;
+  transform: translateY(-50%);
+}
+
+.ctaRingTwo {
+  top: 50%;
+  left: -35px;
+  width: 140px;
+  height: 140px;
+  transform: translateY(-50%);
+}
+
+.ctaRingThree {
+  right: -115px;
+  bottom: -160px;
+  width: 370px;
+  height: 370px;
+}
+
+.marketingFooter {
+  display: flex;
+  width: min(100% - 48px, 1410px);
+  min-height: 104px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  margin: 0 auto;
+}
+
+.footerWordmark {
+  font-size: 1.75rem;
+  font-weight: 850;
+  letter-spacing: -0.075em;
+}
+
+.footerWordmark span {
+  color: #7c38ee;
+}
+
+.marketingFooter nav {
+  display: flex;
+  gap: 28px;
+  color: var(--marketing-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.marketingFooter nav a:hover {
+  color: var(--marketing-purple);
+}
+
 @media (max-width: 1120px) {
   .hero { min-height: auto; grid-template-columns: 1fr; }
   .heroCopy {
@@ -652,8 +1024,6 @@
     letter-spacing: 0.16em;
   }
   .heroTitle { font-size: clamp(3rem, 14.2vw, 4.7rem); line-height: 0.95; }
-  .heroDescription { font-size: 1rem; }
-  .heroDescription br { display: none; }
   .heroActions { display: grid; grid-template-columns: 1fr 1fr; }
   .primaryCta,
   .secondaryCta {
@@ -703,10 +1073,270 @@
   .stepCopy p { font-size: 0.84rem; }
 }
 
+@media (max-width: 1120px) {
+  .productHeading,
+  .screenComposition {
+    width: min(100%, 920px);
+  }
+
+  .secondaryLeft { left: 4%; }
+  .secondaryRight { right: 4%; }
+
+  .fitnessSpaces,
+  .credibility {
+    width: min(100% - 64px, 1040px);
+  }
+}
+
+@media (max-width: 900px) {
+  .productPreview {
+    padding-top: 52px;
+  }
+
+  .productHeading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .screenComposition {
+    height: 410px;
+    margin-top: 24px;
+  }
+
+  .primary {
+    bottom: -8px;
+    width: 184px;
+  }
+
+  .secondaryLeft,
+  .secondaryRight {
+    bottom: -6px;
+    width: 160px;
+  }
+
+  .fitnessSpaces {
+    grid-template-columns: 1fr;
+    gap: 52px;
+    padding-block: 76px;
+  }
+
+  .fitnessCopy {
+    max-width: 610px;
+  }
+
+  .facilityWall {
+    min-height: 430px;
+  }
+
+  .credibility {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 38px;
+  }
+}
+
+@media (max-width: 760px) {
+  .productPreview {
+    padding: 66px 16px 64px;
+  }
+
+  .productHeading,
+  .screenComposition {
+    width: min(100%, 560px);
+  }
+
+  .productHeading h2 {
+    font-size: clamp(3.3rem, 15vw, 5rem);
+  }
+
+  .screenComposition {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    height: auto;
+    justify-items: center;
+    gap: 30px 20px;
+    margin-top: 50px;
+  }
+
+  .screenFigure,
+  .primary,
+  .secondaryLeft,
+  .secondaryRight {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: min(100%, 220px);
+    transform: none;
+  }
+
+  .primary {
+    grid-column: 1 / -1;
+    order: -1;
+    width: min(100%, 252px);
+  }
+
+  .secondaryLeft,
+  .secondaryRight {
+    width: min(100%, 190px);
+  }
+
+  .screenSlot {
+    border-radius: 27px;
+  }
+
+  .productRingOne {
+    top: 7%;
+    left: -65%;
+  }
+
+  .productRingTwo {
+    right: -74%;
+    bottom: 14%;
+  }
+
+  .fitnessSpaces,
+  .credibility,
+  .marketingFooter {
+    width: min(100% - 32px, 1410px);
+  }
+
+  .fitnessSpaces {
+    gap: 38px;
+    padding-block: 66px;
+  }
+
+  .fitnessCopy h2 {
+    font-size: clamp(3.1rem, 14vw, 4.6rem);
+  }
+
+  .fitnessCopy > p:last-child br {
+    display: none;
+  }
+
+  .facilityWall {
+    min-height: 360px;
+  }
+
+  .facilityPlaque {
+    width: min(68%, 280px);
+  }
+
+  .credibility {
+    padding-block: 56px 62px;
+  }
+
+  .credibilityIntro h2 {
+    font-size: clamp(2.8rem, 12vw, 4rem);
+  }
+
+  .recognition {
+    grid-template-columns: 1fr;
+  }
+
+  .recognition > div {
+    padding-inline: 0;
+  }
+
+  .recognition > div + div {
+    border-top: 1px solid rgba(23, 19, 41, 0.14);
+    border-left: 0;
+  }
+
+  .betaCtaInner {
+    min-height: 300px;
+  }
+
+  .betaCta h2 {
+    font-size: clamp(3.3rem, 14vw, 5.2rem);
+  }
+
+  .ctaRingOne,
+  .ctaRingTwo {
+    left: -145px;
+  }
+
+  .marketingFooter {
+    min-height: 120px;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 420px) {
+  .productPreview {
+    padding-top: 58px;
+  }
+
+  .primary { width: min(100%, 220px); }
+
+  .secondaryLeft,
+  .secondaryRight { width: 100%; }
+
+  .facilityWall {
+    min-height: 320px;
+  }
+
+  .facilitySignalOne,
+  .facilitySignalTwo,
+  .facilitySignalThree {
+    width: 9px;
+  }
+
+  .recognition strong {
+    font-size: 1.65rem;
+  }
+
+  .marketingFooter nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .headerInner {
+    width: calc(100% - 24px);
+    gap: 8px;
+  }
+
+  .headerActions {
+    gap: 7px;
+  }
+
+  .betaLink {
+    padding-inline: 10px;
+  }
+
+  .heroTitle {
+    font-size: 2.55rem;
+  }
+
+  .productHeading h2 {
+    font-size: 2.85rem;
+  }
+
+  .fitnessCopy h2 {
+    font-size: 2.85rem;
+  }
+
+  .credibilityIntro h2 {
+    font-size: 2.45rem;
+  }
+
+  .betaCta h2 {
+    font-size: 2.9rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .desktopLinks a,
   .signInLink,
   .betaLink,
   .primaryCta,
-  .secondaryCta { transition: none; }
+  .secondaryCta,
+  .betaCtaInner > a { transition: none; }
 }

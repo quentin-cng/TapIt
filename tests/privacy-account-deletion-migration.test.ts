@@ -182,8 +182,8 @@ describe("legal page product consistency", () => {
   it("publishes the supplied age and contact facts", () => {
     assert.match(privacyPage, /16 years of age or older/);
     assert.match(termsPage, /at least 16 years old/);
-    assert.match(privacyPage, /quentin\.canaguier@mail\.mcgill\.ca/);
-    assert.match(termsPage, /quentin\.canaguier@mail\.mcgill\.ca/);
+    assert.match(privacyPage, /quentincanaguier@tapit-app\.com/);
+    assert.match(termsPage, /quentincanaguier@tapit-app\.com/);
   });
 
   it("links both legal documents from signup", () => {

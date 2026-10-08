@@ -27,14 +27,6 @@ export function Hero() {
           <span>TapIt makes it worth it.</span>
         </h1>
 
-        <p className={styles.heroDescription}>
-          Set a weekly goal. Tap in when you train.
-          <br />
-          Earn points, build your streak, and stay consistent
-          <br />
-          with your friends.
-        </p>
-
         <div className={styles.heroActions}>
           <Link className={styles.primaryCta} href="#beta">
             Join the beta <span aria-hidden="true">→</span>

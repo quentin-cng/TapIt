@@ -15,8 +15,8 @@ export default function PrivacyPage() {
         </p>
         <p>
           For privacy questions or requests, contact:{" "}
-          <a href="mailto:quentin.canaguier@mail.mcgill.ca">
-            quentin.canaguier@mail.mcgill.ca
+          <a href="mailto:quentincanaguier@tapit-app.com">
+            quentincanaguier@tapit-app.com
           </a>
         </p>
       </div>
@@ -289,7 +289,7 @@ export default function PrivacyPage() {
         <h2>8. Account Deletion</h2>
         <p>
           You may delete your TapIt account through the account settings or
-          contact us at quentin.canaguier@mail.mcgill.ca.
+          contact us at quentincanaguier@tapit-app.com.
         </p>
         <p>
           Deleting your account is intended to permanently remove the TapIt
@@ -309,7 +309,7 @@ export default function PrivacyPage() {
         <p>
           You may request access to personal information TapIt holds about you or
           request correction of inaccurate information by contacting
-          quentin.canaguier@mail.mcgill.ca.
+          quentincanaguier@tapit-app.com.
         </p>
         <p>
           We may need to verify your identity before processing a privacy request.
@@ -367,8 +367,8 @@ export default function PrivacyPage() {
           TapIt
           <br />
           Email:{" "}
-          <a href="mailto:quentin.canaguier@mail.mcgill.ca">
-            quentin.canaguier@mail.mcgill.ca
+          <a href="mailto:quentincanaguier@tapit-app.com">
+            quentincanaguier@tapit-app.com
           </a>
           <br />
           Quebec, Canada

@@ -17,8 +17,8 @@ export default function TermsPage() {
         </p>
         <p>
           For questions, contact:{" "}
-          <a href="mailto:quentin.canaguier@mail.mcgill.ca">
-            quentin.canaguier@mail.mcgill.ca
+          <a href="mailto:quentincanaguier@tapit-app.com">
+            quentincanaguier@tapit-app.com
           </a>
         </p>
       </div>
@@ -363,8 +363,8 @@ export default function TermsPage() {
         <address>
           TapIt
           <br />
-          <a href="mailto:quentin.canaguier@mail.mcgill.ca">
-            quentin.canaguier@mail.mcgill.ca
+          <a href="mailto:quentincanaguier@tapit-app.com">
+            quentincanaguier@tapit-app.com
           </a>
           <br />
           Quebec, Canada
