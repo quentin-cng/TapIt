@@ -14,6 +14,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../auth/SessionProvider";
+import {
+  AuthMethodDivider,
+  GoogleAuthButton,
+} from "../features/auth/GoogleAuthButton";
 import { supabase } from "../lib/supabase";
 import { TapPressable } from "../motion/TapPressable";
 import { colors, fonts, radii, v3Colors } from "../theme/tokens";
@@ -81,6 +85,11 @@ export default function SignInScreen() {
             <Text accessibilityRole="header" style={styles.title}>
               Welcome back<Text style={styles.period}>.</Text>
             </Text>
+
+            <View style={styles.googleMethod}>
+              <GoogleAuthButton />
+              <AuthMethodDivider />
+            </View>
 
             <View style={styles.fields}>
               <View style={styles.field}>
@@ -189,7 +198,8 @@ const styles = StyleSheet.create({
     lineHeight: 47,
   },
   period: { color: v3Colors.purple },
-  fields: { gap: 18, marginTop: 38 },
+  googleMethod: { marginTop: 34 },
+  fields: { gap: 18 },
   field: {
     gap: 8,
   },

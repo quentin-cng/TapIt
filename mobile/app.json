@@ -2,6 +2,7 @@
   "expo": {
     "name": "TapIt",
     "slug": "tapit-mobile",
+    "scheme": "com.tapit.app",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -37,7 +38,8 @@
         }
       ],
       "expo-router",
-      "expo-font"
+      "expo-font",
+      "expo-web-browser"
     ],
     "extra": {
       "router": {},

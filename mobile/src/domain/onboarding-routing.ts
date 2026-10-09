@@ -22,6 +22,13 @@ export function getAuthoritativeSetupPath(readiness: SetupReadiness) {
   return null;
 }
 
+export function isPublicPriorityPath(pathname: string) {
+  return (
+    pathname === "/auth/callback" ||
+    pathname.startsWith("/checkin/")
+  );
+}
+
 export function isDevelopmentOnboardingPreviewPath(
   pathname: string,
   isDevelopment: boolean,

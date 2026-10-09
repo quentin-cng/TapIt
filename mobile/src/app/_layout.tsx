@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { SessionProvider, useSession } from "../auth/SessionProvider";
+import { isGoogleOAuthCallbackPath } from "../auth/google-oauth-contract";
 import {
   PendingCheckinProvider,
   usePendingCheckin,
@@ -46,6 +47,7 @@ function RootNavigator() {
     refresh: refreshOnboarding,
   } = useOnboarding();
   const pathname = usePathname();
+  const isGoogleOAuthCallbackRoute = isGoogleOAuthCallbackPath(pathname);
   const isDevelopmentOnboardingPreview =
     isDevelopmentOnboardingPreviewPath(pathname, __DEV__);
   const handoffToken = useRef<string | null>(null);
@@ -69,11 +71,15 @@ function RootNavigator() {
       return;
     }
 
-    if (pathname.startsWith("/onboarding/") && !pendingToken) {
+    if (
+      (pathname.startsWith("/onboarding/") || isGoogleOAuthCallbackRoute) &&
+      !pendingToken
+    ) {
       router.replace("/");
     }
   }, [
     isHydrating,
+    isGoogleOAuthCallbackRoute,
     isOnboardingComplete,
     isOnboardingHydrating,
     isRestoring,
@@ -177,6 +183,7 @@ function RootNavigator() {
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
       </Stack.Protected>
+      <Stack.Screen name="auth/callback" />
       <Stack.Screen name="checkin/[token]" />
     </Stack>
   );

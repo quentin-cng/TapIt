@@ -14,6 +14,10 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  AuthMethodDivider,
+  GoogleAuthButton,
+} from "../auth/GoogleAuthButton";
 import { TapPressable } from "../../motion/TapPressable";
 import { colors, fonts, radii, v3Colors } from "../../theme/tokens";
 
@@ -155,7 +159,16 @@ export function CreateAccountChoice({
               Create your account<Text style={styles.period}>.</Text>
             </Text>
 
-            <View style={styles.fields}>
+            {!preview ? (
+              <View style={styles.googleMethod}>
+                <GoogleAuthButton />
+                <AuthMethodDivider />
+              </View>
+            ) : null}
+
+            <View
+              style={[styles.fields, !preview && styles.fieldsAfterGoogle]}
+            >
               <View style={styles.field}>
                 <Text style={styles.label}>Email</Text>
                 <TextInput
@@ -310,7 +323,9 @@ const styles = StyleSheet.create({
     lineHeight: 47,
   },
   period: { color: v3Colors.purple },
+  googleMethod: { marginTop: 34 },
   fields: { gap: 18, marginTop: 38 },
+  fieldsAfterGoogle: { marginTop: 0 },
   field: { gap: 8 },
   label: {
     color: v3Colors.ink,
