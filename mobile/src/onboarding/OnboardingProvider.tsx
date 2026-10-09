@@ -10,9 +10,15 @@ import {
 } from "react";
 import { useSession } from "../auth/SessionProvider";
 import { supabase } from "../lib/supabase";
+import {
+  isJwtIssuedAtFutureError,
+  READINESS_JWT_RETRY_DELAYS_MS,
+} from "./readiness-retry";
 
 type OnboardingProfile = {
+  avatar_selected_at: string | null;
   display_name: string | null;
+  onboarding_completed_at: string | null;
   username: string;
 };
 
@@ -20,8 +26,10 @@ export type OnboardingReadiness =
   | "signed-out"
   | "loading"
   | "error"
+  | "avatar-required"
   | "identity-incomplete"
   | "weekly-goal-required"
+  | "confirmation-required"
   | "complete";
 
 type OnboardingContextValue = {
@@ -37,6 +45,24 @@ const OnboardingContext = createContext<OnboardingContextValue | null>(null);
 
 function getGeneratedFallbackUsername(userId: string) {
   return `user_${userId.replaceAll("-", "").slice(0, 12)}`;
+}
+
+function beginReadinessLoad(current: OnboardingReadiness) {
+  if (
+    current === "avatar-required" ||
+    current === "identity-incomplete" ||
+    current === "weekly-goal-required" ||
+    current === "confirmation-required" ||
+    current === "complete"
+  ) {
+    return current;
+  }
+
+  return "loading";
+}
+
+function wait(milliseconds: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
 
 export function OnboardingProvider({ children }: PropsWithChildren) {
@@ -62,18 +88,39 @@ export function OnboardingProvider({ children }: PropsWithChildren) {
     }
 
     const currentRequest = ++requestId.current;
-    setReadiness("loading");
+    setReadiness(beginReadinessLoad);
     setError("");
 
-    const [profileResult, goalResult] = await Promise.all([
-      supabase.rpc("get_my_profile").single(),
+    const loadProfile = () => supabase.rpc("get_my_profile").single();
+    const loadGoal = () =>
       supabase
         .from("weekly_goal_schedules")
         .select("effective_week")
         .eq("user_id", userId)
         .limit(1)
-        .maybeSingle(),
+        .maybeSingle();
+
+    let [profileResult, goalResult] = await Promise.all([
+      loadProfile(),
+      loadGoal(),
     ]);
+
+    for (const delay of READINESS_JWT_RETRY_DELAYS_MS) {
+      if (currentRequest !== requestId.current) return;
+
+      const retryProfile = isJwtIssuedAtFutureError(profileResult.error);
+      const retryGoal = isJwtIssuedAtFutureError(goalResult.error);
+
+      if (!retryProfile && !retryGoal) break;
+
+      await wait(delay);
+      if (currentRequest !== requestId.current) return;
+
+      [profileResult, goalResult] = await Promise.all([
+        retryProfile ? loadProfile() : Promise.resolve(profileResult),
+        retryGoal ? loadGoal() : Promise.resolve(goalResult),
+      ]);
+    }
 
     if (currentRequest !== requestId.current) return;
 
@@ -96,15 +143,25 @@ export function OnboardingProvider({ children }: PropsWithChildren) {
     setProfile(nextProfile);
     setResolvedUserId(userId);
 
-    if (goalResult.data) {
-      setReadiness("complete");
+    if (!nextProfile.avatar_selected_at) {
+      setReadiness("avatar-required");
+      return;
+    }
+
+    if (nextProfile.username === getGeneratedFallbackUsername(userId)) {
+      setReadiness("identity-incomplete");
+      return;
+    }
+
+    if (!goalResult.data) {
+      setReadiness("weekly-goal-required");
       return;
     }
 
     setReadiness(
-      nextProfile.username === getGeneratedFallbackUsername(userId)
-        ? "identity-incomplete"
-        : "weekly-goal-required",
+      nextProfile.onboarding_completed_at
+        ? "complete"
+        : "confirmation-required",
     );
   }, [userId]);
 

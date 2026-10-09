@@ -62,8 +62,11 @@ export function OnboardingPreviewFlow({ onExit }: OnboardingPreviewFlowProps) {
     return (
       <CreateAccountChoice
         onBack={() => setStep("intro")}
-        onEmail={() => setStep("avatar")}
         onSignIn={() => setStep("avatar")}
+        onSubmit={async () => {
+          setStep("avatar");
+          return { status: "complete" };
+        }}
         preview
       />
     );
@@ -187,6 +190,12 @@ export function OnboardingPreviewFlow({ onExit }: OnboardingPreviewFlowProps) {
               </Pressable>
             );
           })}
+        </View>
+        <View style={styles.goalSelectionSummary}>
+          <Text style={styles.goalSelectionNumber}>{weeklyGoal}</Text>
+          <Text style={styles.goalSelectionLabel}>
+            {weeklyGoal === 1 ? "session" : "sessions"} each week
+          </Text>
         </View>
       </PreviewStepFrame>
     );
@@ -423,20 +432,48 @@ const styles = StyleSheet.create({
   },
   goalOption: {
     minWidth: 40,
-    height: 48,
+    height: 52,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+    borderRadius: 15,
     backgroundColor: "#f4eadd",
   },
-  goalOptionSelected: { backgroundColor: v3Colors.purple },
+  goalOptionSelected: {
+    borderColor: v3Colors.purpleDark,
+    backgroundColor: v3Colors.purpleDark,
+  },
   goalOptionText: {
     color: v3Colors.ink,
     fontFamily: fonts.semibold,
     fontSize: 14,
   },
   goalOptionTextSelected: { color: "#fffaf1" },
+  goalSelectionSummary: {
+    minHeight: 72,
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 22,
+    borderRadius: 18,
+    backgroundColor: "#f8eee3",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  goalSelectionNumber: {
+    color: v3Colors.purpleDark,
+    fontFamily: fonts.display,
+    fontSize: 36,
+    letterSpacing: -1.5,
+  },
+  goalSelectionLabel: {
+    color: v3Colors.ink,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+  },
   completeScreen: {
     flex: 1,
     backgroundColor: "#fff8ed",

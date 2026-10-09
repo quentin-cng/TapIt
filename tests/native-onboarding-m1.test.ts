@@ -58,15 +58,14 @@ describe("native onboarding M1 route contract", () => {
     assert.match(rootLayout, /getAuthoritativeSetupPath\(readiness\)/);
   });
 
-  it("routes Welcome and account choices to existing auth screens", () => {
+  it("routes Welcome into the final account form and preserves Sign In", () => {
     assert.match(welcomeRoute, /router\.push\("\/create-account"\)/);
     assert.match(welcomeRoute, /router\.push\("\/sign-in"\)/);
-    assert.match(createAccountRoute, /router\.push\("\/sign-up"\)/);
-    assert.match(createAccountRoute, /router\.push\("\/sign-in"\)/);
-    assert.match(createAccountChoice, /Continue with Apple/);
-    assert.match(createAccountChoice, /Continue with Google/);
-    assert.match(createAccountChoice, /ProviderButton disabled icon="apple"/);
-    assert.match(createAccountChoice, /ProviderButton disabled icon="google"/);
+    assert.match(createAccountRoute, /SignUpScreen as default/);
+    assert.match(createAccountChoice, /Create your account/);
+    assert.match(createAccountChoice, /accessibilityLabel="Email"/);
+    assert.match(createAccountChoice, /accessibilityLabel="Password"/);
+    assert.match(createAccountChoice, /Already have an account\?/);
     assert.doesNotMatch(createAccountChoice, /signInWithOAuth|auth\.signUp/);
   });
 

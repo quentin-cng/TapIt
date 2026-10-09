@@ -1,15 +1,21 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
+import { TapPressable } from "../../motion/TapPressable";
 import { useOnboarding } from "../../onboarding/OnboardingProvider";
-import { colors, fonts, radii } from "../../theme/tokens";
-import { OnboardingStepScreen } from "./OnboardingStepScreen";
+import { colors, fonts, v3Colors } from "../../theme/tokens";
+
+const weeklyGoalOptions = [1, 2, 3, 4, 5, 6, 7] as const;
+type WeeklyGoal = (typeof weeklyGoalOptions)[number];
 
 type ConfigureGoalResult = {
   applies_current_week: boolean;
@@ -28,6 +34,15 @@ function isConfigureGoalResult(value: unknown): value is ConfigureGoalResult {
   );
 }
 
+function isWeeklyGoal(value: number | null): value is WeeklyGoal {
+  return (
+    value !== null &&
+    Number.isInteger(value) &&
+    value >= weeklyGoalOptions[0] &&
+    value <= weeklyGoalOptions[weeklyGoalOptions.length - 1]
+  );
+}
+
 export function WeeklyGoalSetupScreen() {
   const { refresh } = useOnboarding();
   const [selectedGoal, setSelectedGoal] = useState<number | null>(null);
@@ -38,12 +53,7 @@ export function WeeklyGoalSetupScreen() {
   async function saveGoal() {
     if (submissionInFlight.current) return;
 
-    if (
-      selectedGoal === null ||
-      !Number.isInteger(selectedGoal) ||
-      selectedGoal < 1 ||
-      selectedGoal > 7
-    ) {
+    if (!isWeeklyGoal(selectedGoal)) {
       setError("Choose a weekly goal from 1 to 7 sessions.");
       return;
     }
@@ -70,7 +80,10 @@ export function WeeklyGoalSetupScreen() {
       }
 
       const result = Array.isArray(data) ? data[0] : data;
-      if (!isConfigureGoalResult(result)) {
+      if (
+        !isConfigureGoalResult(result) ||
+        result.goal_sessions !== selectedGoal
+      ) {
         if (__DEV__) {
           console.error(
             "[mobile onboarding] weekly goal returned no valid result",
@@ -92,158 +105,221 @@ export function WeeklyGoalSetupScreen() {
     }
   }
 
-  return (
-    <OnboardingStepScreen
-      isBusy={isSubmitting}
-      message="Choose the commitment you want to make each week. You can schedule changes later from Profile."
-      title="Set your weekly goal"
-    >
-      <View style={styles.form}>
-        <View
-          accessibilityLabel="Weekly session goal"
-          accessibilityRole="radiogroup"
-          style={styles.options}
-        >
-          {Array.from({ length: 7 }, (_, index) => index + 1).map((goal) => {
-            const isSelected = selectedGoal === goal;
+  async function signOut() {
+    await supabase.auth.signOut();
+  }
 
-            return (
-              <Pressable
-                accessibilityLabel={`${goal} ${goal === 1 ? "session" : "sessions"} per week`}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: isSelected }}
-                disabled={isSubmitting}
-                key={goal}
-                onPress={() => {
-                  setSelectedGoal(goal);
-                  setError("");
-                }}
-                style={({ pressed }) => [
-                  styles.option,
-                  isSelected && styles.optionSelected,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.optionText,
-                    isSelected && styles.optionTextSelected,
+  const isContinueDisabled = isSubmitting || selectedGoal === null;
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.heading}>
+          <Text style={styles.kicker}>ACCOUNT SETUP</Text>
+          <Text accessibilityRole="header" style={styles.title}>
+            Set your weekly goal<Text style={styles.period}>.</Text>
+          </Text>
+          <Text style={styles.copy}>
+            How many times do you want to show up each week?
+          </Text>
+        </View>
+
+        <View style={styles.form}>
+          <View
+            accessibilityLabel="Weekly session goal"
+            accessibilityRole="radiogroup"
+            style={styles.options}
+          >
+            {weeklyGoalOptions.map((goal) => {
+              const isSelected = selectedGoal === goal;
+
+              return (
+                <Pressable
+                  accessibilityLabel={`${goal} ${goal === 1 ? "session" : "sessions"} per week`}
+                  accessibilityRole="radio"
+                  accessibilityState={{
+                    checked: isSelected,
+                    disabled: isSubmitting,
+                  }}
+                  disabled={isSubmitting}
+                  key={goal}
+                  onPress={() => {
+                    setSelectedGoal(goal);
+                    setError("");
+                  }}
+                  style={({ pressed }) => [
+                    styles.option,
+                    isSelected && styles.optionSelected,
+                    pressed && styles.pressed,
                   ]}
                 >
-                  {goal}
+                  <Text
+                    style={[
+                      styles.optionText,
+                      isSelected && styles.optionTextSelected,
+                    ]}
+                  >
+                    {goal}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.selectionSummary}>
+            {selectedGoal === null ? (
+              <Text style={styles.selectionPrompt}>Choose 1–7 sessions.</Text>
+            ) : (
+              <>
+                <Text style={styles.selectionNumber}>{selectedGoal}</Text>
+                <Text style={styles.selectionLabel}>
+                  {selectedGoal === 1 ? "session" : "sessions"} each week
                 </Text>
-              </Pressable>
-            );
-          })}
+              </>
+            )}
+          </View>
+
+          {error ? (
+            <Text accessibilityRole="alert" style={styles.error}>
+              {error}
+            </Text>
+          ) : null}
+
+          <TapPressable
+            accessibilityRole="button"
+            accessibilityState={{
+              busy: isSubmitting,
+              disabled: isContinueDisabled,
+            }}
+            disabled={isContinueDisabled}
+            haptic="press"
+            onPress={() => void saveGoal()}
+            style={[styles.button, isContinueDisabled && styles.disabled]}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#fffaf1" />
+            ) : (
+              <>
+                <Text style={styles.buttonText}>Continue</Text>
+                <MaterialCommunityIcons
+                  color="#fffaf1"
+                  name="arrow-right"
+                  size={20}
+                />
+              </>
+            )}
+          </TapPressable>
         </View>
-
-        <View style={styles.summary}>
-          {selectedGoal ? (
-            <>
-              <Text style={styles.summaryNumber}>{selectedGoal}</Text>
-              <Text style={styles.summaryLabel}>
-                {selectedGoal === 1 ? "session" : "sessions"} per week
-              </Text>
-            </>
-          ) : (
-            <Text style={styles.summaryPrompt}>Select a goal from 1 to 7.</Text>
-          )}
-        </View>
-
-        <Text style={styles.help}>
-          Your first goal starts this week. TapIt uses Montreal calendar weeks.
-        </Text>
-
-        {error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            {error}
-          </Text>
-        ) : null}
 
         <Pressable
           accessibilityRole="button"
-          disabled={isSubmitting || selectedGoal === null}
-          onPress={() => void saveGoal()}
-          style={({ pressed }) => [
-            styles.button,
-            (isSubmitting || selectedGoal === null) && styles.disabled,
-            pressed && styles.pressed,
-          ]}
+          disabled={isSubmitting}
+          onPress={() => void signOut()}
+          style={({ pressed }) => pressed && styles.pressed}
         >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.surface} />
-          ) : (
-            <Text style={styles.buttonText}>Start my week</Text>
-          )}
+          <Text style={styles.signOut}>Log out</Text>
         </Pressable>
-      </View>
-    </OnboardingStepScreen>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff8ed",
+  },
+  content: {
+    minHeight: "100%",
+    flexGrow: 1,
+    justifyContent: "center",
+    gap: 34,
+    paddingHorizontal: 24,
+    paddingVertical: 30,
+  },
+  heading: {
+    gap: 10,
+  },
+  kicker: {
+    color: v3Colors.purple,
+    fontFamily: fonts.bold,
+    fontSize: 10,
+    letterSpacing: 1.25,
+  },
+  title: {
+    maxWidth: 350,
+    color: v3Colors.ink,
+    fontFamily: fonts.display,
+    fontSize: 40,
+    letterSpacing: -1.8,
+    lineHeight: 44,
+  },
+  period: {
+    color: v3Colors.purple,
+  },
+  copy: {
+    maxWidth: 340,
+    color: "#706474",
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    lineHeight: 22,
+  },
   form: {
-    gap: 18,
+    gap: 22,
   },
   options: {
     flexDirection: "row",
-    gap: 7,
+    gap: 6,
   },
   option: {
     minWidth: 0,
-    minHeight: 46,
+    minHeight: 52,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.medium,
-    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+    borderRadius: 15,
+    backgroundColor: "#f4eadd",
   },
   optionSelected: {
-    borderColor: colors.purple,
-    backgroundColor: colors.purple,
+    borderColor: v3Colors.purpleDark,
+    backgroundColor: v3Colors.purpleDark,
   },
   optionText: {
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.semibold,
-    fontSize: 15,
+    fontSize: 14,
   },
   optionTextSelected: {
-    color: colors.surface,
+    color: "#fffaf1",
   },
-  summary: {
-    minHeight: 64,
+  selectionSummary: {
+    minHeight: 72,
     flexDirection: "row",
     alignItems: "baseline",
     justifyContent: "center",
     gap: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingBottom: 14,
+    borderRadius: 18,
+    backgroundColor: "#f8eee3",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  summaryNumber: {
-    color: colors.textPrimary,
+  selectionNumber: {
+    color: v3Colors.purpleDark,
     fontFamily: fonts.display,
-    fontSize: 34,
+    fontSize: 36,
     letterSpacing: -1.5,
   },
-  summaryLabel: {
-    color: colors.textSecondary,
+  selectionLabel: {
+    color: v3Colors.ink,
     fontFamily: fonts.medium,
     fontSize: 14,
   },
-  summaryPrompt: {
-    color: colors.textMuted,
-    fontFamily: fonts.regular,
+  selectionPrompt: {
+    color: "#8d818f",
+    fontFamily: fonts.medium,
     fontSize: 14,
-  },
-  help: {
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: "center",
   },
   error: {
     color: colors.danger,
@@ -253,17 +329,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   button: {
-    minHeight: 50,
+    minHeight: 54,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radii.medium,
-    backgroundColor: colors.purple,
-    paddingHorizontal: 18,
+    gap: 9,
+    borderRadius: 17,
+    backgroundColor: v3Colors.ink,
+    paddingHorizontal: 20,
   },
   buttonText: {
-    color: colors.surface,
+    color: "#fffaf1",
     fontFamily: fonts.bold,
     fontSize: 15,
+  },
+  signOut: {
+    color: "#706474",
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    paddingVertical: 8,
+    textAlign: "center",
   },
   disabled: {
     opacity: 0.45,

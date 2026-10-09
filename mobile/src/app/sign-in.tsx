@@ -1,7 +1,8 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,7 +15,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../auth/SessionProvider";
 import { supabase } from "../lib/supabase";
-import { colors, fonts, radii } from "../theme/tokens";
+import { TapPressable } from "../motion/TapPressable";
+import { colors, fonts, radii, v3Colors } from "../theme/tokens";
 
 export default function SignInScreen() {
   const { restoreError } = useSession();
@@ -22,30 +24,41 @@ export default function SignInScreen() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const passwordInput = useRef<TextInput>(null);
+  const submissionInFlight = useRef(false);
 
   async function signIn() {
+    if (submissionInFlight.current || !email.trim() || !password) return;
+
+    Keyboard.dismiss();
+    submissionInFlight.current = true;
     setAuthError("");
     setIsSigningIn(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-    if (error) {
-      const normalizedMessage = error.message.toLowerCase();
-      setAuthError(
-        normalizedMessage.includes("invalid login credentials")
-          ? "Email or password is incorrect."
-          : normalizedMessage.includes("email not confirmed")
-            ? "Confirm your email before logging in."
-          : "We could not log you in. Please try again.",
-      );
-    } else {
-      setPassword("");
+      if (error) {
+        const normalizedMessage = error.message.toLowerCase();
+        setAuthError(
+          normalizedMessage.includes("invalid login credentials")
+            ? "Email or password is incorrect."
+            : normalizedMessage.includes("email not confirmed")
+              ? "Confirm your email before logging in."
+              : "We could not log you in. Please try again.",
+        );
+      } else {
+        setPassword("");
+      }
+    } catch {
+      setAuthError("We could not log you in. Please try again.");
+    } finally {
+      submissionInFlight.current = false;
+      setIsSigningIn(false);
     }
-
-    setIsSigningIn(false);
   }
 
   const isDisabled = isSigningIn || !email.trim() || !password;
@@ -57,50 +70,56 @@ export default function SignInScreen() {
         style={styles.keyboardView}
       >
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content}
+          keyboardDismissMode={
+            Platform.OS === "ios" ? "interactive" : "on-drag"
+          }
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.wordmarkRow}>
-            <Text style={styles.wordmark}>
-              Tap<Text style={styles.wordmarkAccent}>It</Text>
-            </Text>
-          </View>
-
           <View style={styles.form}>
             <Text accessibilityRole="header" style={styles.title}>
-              Log in
+              Welcome back<Text style={styles.period}>.</Text>
             </Text>
-            <Text style={styles.subtitle}>Use your existing TapIt account.</Text>
 
-            <View style={styles.field}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                autoCapitalize="none"
-                autoComplete="email"
-                editable={!isSigningIn}
-                inputMode="email"
-                onChangeText={setEmail}
-                placeholder="example@email.com"
-                placeholderTextColor={colors.textMuted}
-                style={styles.input}
-                value={email}
-              />
-            </View>
+            <View style={styles.fields}>
+              <View style={styles.field}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  accessibilityLabel="Email"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect={false}
+                  editable={!isSigningIn}
+                  inputMode="email"
+                  onChangeText={setEmail}
+                  onSubmitEditing={() => passwordInput.current?.focus()}
+                  placeholder="you@example.com"
+                  placeholderTextColor="#9d919f"
+                  returnKeyType="next"
+                  style={styles.input}
+                  value={email}
+                />
+              </View>
 
-            <View style={styles.field}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                autoCapitalize="none"
-                autoComplete="current-password"
-                editable={!isSigningIn}
-                onChangeText={setPassword}
-                onSubmitEditing={() => void signIn()}
-                placeholder="Password"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry
-                style={styles.input}
-                value={password}
-              />
+              <View style={styles.field}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  accessibilityLabel="Password"
+                  autoCapitalize="none"
+                  autoComplete="current-password"
+                  editable={!isSigningIn}
+                  onChangeText={setPassword}
+                  onSubmitEditing={() => void signIn()}
+                  placeholder="Your password"
+                  placeholderTextColor="#9d919f"
+                  ref={passwordInput}
+                  returnKeyType="done"
+                  secureTextEntry
+                  style={styles.input}
+                  value={password}
+                />
+              </View>
             </View>
 
             {authError || restoreError ? (
@@ -109,32 +128,30 @@ export default function SignInScreen() {
               </Text>
             ) : null}
 
-            <Pressable
+            <TapPressable
               accessibilityRole="button"
+              accessibilityState={{ busy: isSigningIn, disabled: isDisabled }}
               disabled={isDisabled}
+              haptic="press"
               onPress={() => void signIn()}
-              style={({ pressed }) => [
-                styles.button,
-                isDisabled && styles.disabled,
-                pressed && styles.pressed,
-              ]}
+              style={[styles.button, isDisabled && styles.disabled]}
             >
               {isSigningIn ? (
-                <ActivityIndicator color={colors.surface} />
+                <ActivityIndicator color="#fffaf1" />
               ) : (
-                <Text style={styles.buttonText}>Log in</Text>
+                <Text style={styles.buttonText}>Sign in</Text>
               )}
-            </Pressable>
+            </TapPressable>
 
-            <View style={styles.switchRow}>
-              <Text style={styles.switchCopy}>New to TapIt?</Text>
+            <View style={styles.createAccountRow}>
+              <Text style={styles.createAccountCopy}>New to TapIt?</Text>
               <Pressable
                 accessibilityRole="link"
                 disabled={isSigningIn}
                 onPress={() => router.push("/sign-up")}
                 style={({ pressed }) => pressed && styles.pressed}
               >
-                <Text style={styles.switchLink}>Create account</Text>
+                <Text style={styles.createAccountLink}>Create account</Text>
               </Pressable>
             </View>
           </View>
@@ -147,104 +164,86 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#fff8f1",
   },
   keyboardView: {
     flex: 1,
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  wordmarkRow: {
-    minHeight: 68,
     justifyContent: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  wordmark: {
-    color: colors.textPrimary,
-    fontFamily: fonts.extraBold,
-    fontSize: 24,
-    letterSpacing: -1.5,
-  },
-  wordmarkAccent: {
-    color: colors.purple,
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 36,
   },
   form: {
-    flex: 1,
-    justifyContent: "center",
-    paddingVertical: 48,
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
   },
   title: {
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.display,
-    fontSize: 46,
-    letterSpacing: -2.8,
-    lineHeight: 49,
+    fontSize: 43,
+    letterSpacing: -2.1,
+    lineHeight: 47,
   },
-  subtitle: {
-    marginTop: 10,
-    marginBottom: 36,
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 15,
-  },
+  period: { color: v3Colors.purple },
+  fields: { gap: 18, marginTop: 38 },
   field: {
     gap: 8,
-    marginBottom: 18,
   },
   label: {
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.semibold,
     fontSize: 13,
   },
   input: {
-    minHeight: 50,
+    minHeight: 54,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.medium,
-    paddingHorizontal: 14,
-    color: colors.textPrimary,
-    backgroundColor: colors.surface,
+    borderColor: "#ddcfbf",
+    borderRadius: 15,
+    paddingHorizontal: 16,
+    color: v3Colors.ink,
+    backgroundColor: "#fffcf6",
     fontFamily: fonts.regular,
     fontSize: 16,
   },
   error: {
-    marginBottom: 16,
+    marginTop: 16,
     color: colors.danger,
     fontFamily: fonts.regular,
     fontSize: 13,
     lineHeight: 19,
   },
   button: {
-    minHeight: 50,
+    minHeight: 54,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radii.medium,
-    backgroundColor: colors.purple,
+    marginTop: 24,
+    borderRadius: radii.large,
+    backgroundColor: v3Colors.ink,
     paddingHorizontal: 18,
   },
   buttonText: {
-    color: colors.surface,
+    color: "#fffaf1",
     fontFamily: fonts.bold,
     fontSize: 15,
   },
-  switchRow: {
-    marginTop: 24,
+  createAccountRow: {
     flexDirection: "row",
     justifyContent: "center",
     gap: 5,
+    marginTop: 24,
   },
-  switchCopy: {
-    color: colors.textSecondary,
+  createAccountCopy: {
+    color: "#746a78",
     fontFamily: fonts.regular,
     fontSize: 13,
   },
-  switchLink: {
-    color: colors.purple,
-    fontFamily: fonts.semibold,
+  createAccountLink: {
+    color: v3Colors.purple,
+    fontFamily: fonts.bold,
     fontSize: 13,
   },
   disabled: {

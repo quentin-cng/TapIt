@@ -13,6 +13,7 @@ import { useSession } from "../../auth/SessionProvider";
 import { isValidCheckinToken } from "../../checkin/checkin-contract";
 import { CheckinScreen } from "../../checkin/CheckinScreen";
 import { usePendingCheckin } from "../../checkin/PendingCheckinProvider";
+import { getAuthoritativeSetupPath } from "../../domain/onboarding-routing";
 import { useOnboarding } from "../../onboarding/OnboardingProvider";
 import { fonts } from "../../theme/tokens";
 
@@ -56,10 +57,9 @@ export default function PublicCheckinRoute() {
 
     let isActive = true;
     const destination = session
-      ? readiness === "identity-incomplete"
-        ? "/onboarding/profile"
-        : "/onboarding/weekly-goal"
+      ? getAuthoritativeSetupPath(readiness)
       : "/sign-in";
+    if (!destination) return;
     const handoffKey = `${destination}:${token}`;
     if (deferredHandoffKey.current === handoffKey) return;
 

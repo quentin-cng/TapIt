@@ -1,12 +1,18 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   isValidDisplayName,
   isValidUsername,
@@ -15,8 +21,7 @@ import {
 } from "../../domain/profile-identity";
 import { supabase } from "../../lib/supabase";
 import { useOnboarding } from "../../onboarding/OnboardingProvider";
-import { colors, fonts, radii } from "../../theme/tokens";
-import { OnboardingStepScreen } from "./OnboardingStepScreen";
+import { colors, fonts, v3Colors } from "../../theme/tokens";
 
 type FieldErrors = {
   displayName?: string;
@@ -31,9 +36,12 @@ export function ProfileSetupScreen() {
   const [submissionError, setSubmissionError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionInFlight = useRef(false);
+  const usernameInput = useRef<TextInput>(null);
 
   async function saveProfile() {
     if (submissionInFlight.current) return;
+
+    Keyboard.dismiss();
 
     const normalizedDisplayName = normalizeDisplayName(displayName);
     const normalizedUsername = normalizeUsername(username);
@@ -99,117 +107,190 @@ export function ProfileSetupScreen() {
     }
   }
 
+  async function signOut() {
+    await supabase.auth.signOut();
+  }
+
   return (
-    <OnboardingStepScreen
-      isBusy={isSubmitting}
-      message="Choose the name your friends will see and a unique TapIt username."
-      title="Set up your profile"
-    >
-      <View style={styles.form}>
-        <View style={styles.field}>
-          <Text style={styles.label}>Display name</Text>
-          <TextInput
-            autoCapitalize="words"
-            autoComplete="name"
-            editable={!isSubmitting}
-            maxLength={30}
-            onChangeText={(value) => {
-              setDisplayName(value);
-              if (fieldErrors.displayName) {
-                setFieldErrors((current) => ({
-                  ...current,
-                  displayName: undefined,
-                }));
-              }
-            }}
-            placeholder="Your name"
-            placeholderTextColor={colors.textMuted}
-            style={[
-              styles.input,
-              fieldErrors.displayName && styles.inputError,
-            ]}
-            value={displayName}
-          />
-          {fieldErrors.displayName ? (
-            <Text accessibilityRole="alert" style={styles.fieldError}>
-              {fieldErrors.displayName}
-            </Text>
-          ) : (
-            <Text style={styles.help}>The name your friends will see.</Text>
-          )}
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Username</Text>
-          <View
-            style={[
-              styles.usernameField,
-              fieldErrors.username && styles.inputError,
-            ]}
-          >
-            <Text style={styles.atSign}>@</Text>
-            <TextInput
-              autoCapitalize="none"
-              autoComplete="username"
-              autoCorrect={false}
-              editable={!isSubmitting}
-              maxLength={30}
-              onChangeText={(value) => {
-                setUsername(value);
-                if (fieldErrors.username) {
-                  setFieldErrors((current) => ({
-                    ...current,
-                    username: undefined,
-                  }));
-                }
-              }}
-              onSubmitEditing={() => void saveProfile()}
-              placeholder="username"
-              placeholderTextColor={colors.textMuted}
-              spellCheck={false}
-              style={styles.usernameInput}
-              value={username}
-            />
-          </View>
-          {fieldErrors.username ? (
-            <Text accessibilityRole="alert" style={styles.fieldError}>
-              {fieldErrors.username}
-            </Text>
-          ) : (
-            <Text style={styles.help}>
-              Unique: lowercase letters, numbers, and underscores.
-            </Text>
-          )}
-        </View>
-
-        {submissionError ? (
-          <Text accessibilityRole="alert" style={styles.submissionError}>
-            {submissionError}
-          </Text>
-        ) : null}
-
-        <Pressable
-          accessibilityRole="button"
-          disabled={isSubmitting}
-          onPress={() => void saveProfile()}
-          style={({ pressed }) => [
-            styles.button,
-            isSubmitting && styles.disabled,
-            pressed && styles.pressed,
-          ]}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          contentContainerStyle={styles.content}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
         >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.surface} />
-          ) : (
-            <Text style={styles.buttonText}>Continue</Text>
-          )}
-        </Pressable>
-      </View>
-    </OnboardingStepScreen>
+          <View style={styles.heading}>
+            <Text style={styles.kicker}>ACCOUNT SETUP</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              Make it yours<Text style={styles.period}>.</Text>
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            <View style={styles.field}>
+              <Text style={styles.label}>Display name</Text>
+              <TextInput
+                autoCapitalize="words"
+                autoComplete="name"
+                blurOnSubmit={false}
+                editable={!isSubmitting}
+                maxLength={30}
+                onChangeText={(value) => {
+                  setDisplayName(value);
+                  if (fieldErrors.displayName) {
+                    setFieldErrors((current) => ({
+                      ...current,
+                      displayName: undefined,
+                    }));
+                  }
+                }}
+                onSubmitEditing={() => usernameInput.current?.focus()}
+                placeholder="Your name"
+                placeholderTextColor="#9d919f"
+                returnKeyType="next"
+                style={[
+                  styles.input,
+                  fieldErrors.displayName && styles.inputError,
+                ]}
+                value={displayName}
+              />
+              {fieldErrors.displayName ? (
+                <Text accessibilityRole="alert" style={styles.fieldError}>
+                  {fieldErrors.displayName}
+                </Text>
+              ) : null}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Username</Text>
+              <View
+                style={[
+                  styles.usernameField,
+                  fieldErrors.username && styles.inputError,
+                ]}
+              >
+                <Text style={styles.atSign}>@</Text>
+                <TextInput
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  autoCorrect={false}
+                  editable={!isSubmitting}
+                  maxLength={30}
+                  onChangeText={(value) => {
+                    setUsername(value);
+                    if (fieldErrors.username) {
+                      setFieldErrors((current) => ({
+                        ...current,
+                        username: undefined,
+                      }));
+                    }
+                  }}
+                  onSubmitEditing={() => void saveProfile()}
+                  placeholder="username"
+                  placeholderTextColor="#9d919f"
+                  ref={usernameInput}
+                  returnKeyType="done"
+                  spellCheck={false}
+                  style={styles.usernameInput}
+                  value={username}
+                />
+              </View>
+              {fieldErrors.username ? (
+                <Text accessibilityRole="alert" style={styles.fieldError}>
+                  {fieldErrors.username}
+                </Text>
+              ) : (
+                <Text style={styles.help}>
+                  3–30 lowercase letters, numbers, or underscores.
+                </Text>
+              )}
+            </View>
+
+            {submissionError ? (
+              <Text accessibilityRole="alert" style={styles.submissionError}>
+                {submissionError}
+              </Text>
+            ) : null}
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ busy: isSubmitting }}
+              disabled={isSubmitting}
+              onPress={() => void saveProfile()}
+              style={({ pressed }) => [
+                styles.button,
+                isSubmitting && styles.disabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#fffaf1" />
+              ) : (
+                <>
+                  <Text style={styles.buttonText}>Continue</Text>
+                  <MaterialCommunityIcons
+                    color="#fffaf1"
+                    name="arrow-right"
+                    size={20}
+                  />
+                </>
+              )}
+            </Pressable>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSubmitting}
+            onPress={() => void signOut()}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Text style={styles.signOut}>Log out</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff8ed",
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  content: {
+    minHeight: "100%",
+    flexGrow: 1,
+    justifyContent: "center",
+    gap: 32,
+    paddingHorizontal: 24,
+    paddingVertical: 30,
+  },
+  heading: {
+    gap: 10,
+  },
+  kicker: {
+    color: v3Colors.purple,
+    fontFamily: fonts.bold,
+    fontSize: 10,
+    letterSpacing: 1.25,
+  },
+  title: {
+    color: v3Colors.ink,
+    fontFamily: fonts.display,
+    fontSize: 40,
+    letterSpacing: -1.8,
+    lineHeight: 44,
+  },
+  period: {
+    color: v3Colors.purple,
+  },
   form: {
     gap: 18,
   },
@@ -217,49 +298,49 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   label: {
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.semibold,
     fontSize: 13,
   },
   input: {
-    minHeight: 50,
+    minHeight: 52,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.medium,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 14,
-    color: colors.textPrimary,
+    borderColor: "#ddcfc0",
+    borderRadius: 14,
+    backgroundColor: "#fffcf6",
+    paddingHorizontal: 15,
+    color: v3Colors.ink,
     fontFamily: fonts.regular,
-    fontSize: 16,
+    fontSize: 15,
   },
   usernameField: {
-    minHeight: 50,
+    minHeight: 52,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.medium,
-    backgroundColor: colors.surface,
-    paddingLeft: 14,
+    borderColor: "#ddcfc0",
+    borderRadius: 14,
+    backgroundColor: "#fffcf6",
+    paddingLeft: 15,
   },
   atSign: {
-    color: colors.textMuted,
+    color: "#9d919f",
     fontFamily: fonts.regular,
-    fontSize: 16,
+    fontSize: 15,
   },
   usernameInput: {
     minWidth: 0,
     flex: 1,
     paddingHorizontal: 3,
-    color: colors.textPrimary,
+    color: v3Colors.ink,
     fontFamily: fonts.regular,
-    fontSize: 16,
+    fontSize: 15,
   },
   inputError: {
     borderColor: colors.danger,
   },
   help: {
-    color: colors.textMuted,
+    color: "#8d818f",
     fontFamily: fonts.regular,
     fontSize: 11,
     lineHeight: 16,
@@ -275,24 +356,34 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 13,
     lineHeight: 19,
+    textAlign: "center",
   },
   button: {
-    minHeight: 50,
+    minHeight: 54,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radii.medium,
-    backgroundColor: colors.purple,
-    paddingHorizontal: 18,
+    gap: 9,
+    borderRadius: 17,
+    backgroundColor: v3Colors.ink,
+    paddingHorizontal: 20,
   },
   buttonText: {
-    color: colors.surface,
+    color: "#fffaf1",
     fontFamily: fonts.bold,
     fontSize: 15,
+  },
+  signOut: {
+    color: "#706474",
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    paddingVertical: 8,
+    textAlign: "center",
   },
   disabled: {
     opacity: 0.45,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: 0.72,
   },
 });
